@@ -91,27 +91,29 @@ test('calendar hatches the predicted window', () => {
   const h = $('calHTML')('2026-03', { days: {}, today: '2026-03-01', win: { windowStart: '2026-03-25', windowEnd: '2026-03-27' } });
   assert.deepEqual([...h.matchAll(/class="d pw" data-date="([\d-]+)"/g)].map(m => m[1]), ['2026-03-25', '2026-03-26', '2026-03-27']);
 });
-test('bomb: five states from a fake today against a fixture cycle', () => {
-  // starts Jan 1, Jan 29, Feb 26 -> frozen window Mar 25-27
+test('pot: five fill states from a fake today against a fixture cycle', () => {
+  // starts Jan 1, Jan 29, Feb 26 -> frozen window Mar 25-27 (same fixture and dates as the v1 bomb test)
   const st = storeWith(startsFrom('2026-01-01', [28, 28]));
   $('freezePrediction')(st, '2026-02-26');
-  const at = d => { const h = $('status')(st, d); return [h.state, $('bombSVG')(h).match(/data-state="(\w+)" width="(\d+)"/).slice(1).join(':'), h.line1, h.days]; };
-  assert.deepEqual(at('2026-03-10'), ['far', 'far:34', 'T-minus 15 days', 15]);
-  assert.deepEqual(at('2026-03-17'), ['approaching', 'approaching:40', 'T-minus 8 days', 8]);
-  assert.deepEqual(at('2026-03-22'), ['close', 'close:46', 'T-minus 3 days', 3]);
-  assert.deepEqual(at('2026-03-26'), ['window', 'window:52', 'In the window', -1]);
-  assert.deepEqual(at('2026-02-27'), ['period', 'period:34', 'Day 2', undefined]);
+  const pot = d => $('potSVG')($('status')(st, d));
+  const at = d => { const h = $('status')(st, d), svg = pot(d); return [h.state, svg.match(/data-level="([\d.]+)"/)[1], /class="dipper"/.test(svg), /class="drip"/.test(svg), h.line1, h.days]; };
+  assert.deepEqual(at('2026-03-10'), ['far', '0.00', false, false, 'T-minus 15 days', 15]);
+  assert.deepEqual(at('2026-03-17'), ['approaching', '0.33', false, false, 'T-minus 8 days', 8]);
+  assert.deepEqual(at('2026-03-22'), ['close', '0.67', true, false, 'T-minus 3 days', 3]);
+  assert.deepEqual(at('2026-03-26'), ['window', '1.00', true, true, 'In the window', -1]);
+  assert.deepEqual(at('2026-02-27'), ['period', '0.00', false, false, 'Day 2', undefined]);
   assert.match($('status')(st, '2026-03-26').line2, /^Expected Mar 25 – Mar 27$/);
-  // approaching fills from the bottom with cycle progress; close is solid with an unlit fuse; window lit
-  assert.equal($('status')(st, '2026-03-17').fill, 19 / 27);
-  assert.doesNotMatch($('bombSVG')($('status')(st, '2026-03-10')), /<path|spark/);
-  assert.match($('bombSVG')($('status')(st, '2026-03-22')), /<path/); assert.doesNotMatch($('bombSVG')($('status')(st, '2026-03-22')), /spark/);
-  assert.match($('bombSVG')($('status')(st, '2026-03-26')), /spark/);
-  // learning state also shows the small outline
-  assert.equal($('status')(storeWith(['2026-01-01']), '2026-01-20').state, 'far');
-  // logging the next start resets to the small outline for the new cycle
+  // honey is clipped to the pot's inner shape and has the deeper top edge; empty pot draws no honey at all
+  assert.match(pot('2026-03-17'), /<clipPath id="pf"><path d="M21 19[^"]*Z"\/><\/clipPath>/);
+  assert.match(pot('2026-03-17'), /<g clip-path="url\(#pf\)"><rect[^>]*fill="#F59E0B"\/><rect[^>]*fill="#D97706"\/><\/g>/);
+  assert.doesNotMatch(pot('2026-03-10'), /#F59E0B|clip-path=/);
+  // past the window with nothing logged stays full (no "late" state)
+  assert.match(pot('2026-04-05'), /data-state="past" data-level="1.00"/);
+  // learning state also shows the empty outline
+  assert.match($('potSVG')($('status')(storeWith(['2026-01-01']), '2026-01-20')), /data-state="far" data-level="0.00"/);
+  // logging the next start resets to the empty outline for the new cycle
   Object.assign(st.days, storeWith(['2026-03-26']).days);
-  assert.equal($('status')(st, '2026-03-26').state, 'period');
+  assert.match(pot('2026-03-26'), /data-state="period" data-level="0.00"/);
 });
 test('badge: 1-9 days sets a count, window = dot, otherwise cleared; no-op when unsupported', () => {
   const calls = [];
@@ -229,6 +231,78 @@ test('mood check-in banner: modes, evening only, window range, pause, already lo
 test('header copy never says "period"', () => {
   const st = storeWith(startsFrom('2026-01-01', [28, 28]));
   for (let i = -5; i < 60; i++) { const s = $('status')(st, $('addDays')('2026-02-26', i)); assert.doesNotMatch(s.line1 + s.line2, /period/i); }
+});
+
+// ---- skins: tokens per skin, toggle, separate UI key (fake document + localStorage; init() never runs here)
+const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+const skinVars = sel => Object.fromEntries([...css.slice(css.indexOf(sel + '{')).match(/\{([^}]*)\}/)[1].matchAll(/(--[\w]+):([^;}]+)/g)].map(m => [m[1], m[2].trim()]));
+const SKIN_CSS = { midnight: skinVars(':root'), cream: skinVars(':root[data-skin="cream"]') };
+const lum = hex => { const c = hex.slice(1).match(/../g).map(x => parseInt(x, 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+test('skins: both define the same tokens; flow deepens; selected ring, filter ring and shading stay distinct', () => {
+  assert.deepEqual(Object.keys(SKIN_CSS.cream).sort(), Object.keys(SKIN_CSS.midnight).sort());
+  assert.match(html, /<html lang="en" data-skin="midnight">/); // Honey Midnight is the first-run default
+  for (const [skin, v] of Object.entries(SKIN_CSS)) {
+    const away = [1, 2, 3, 4].map(f => Math.abs(lum(v['--f' + f]) - lum(v['--bg'])));
+    assert.ok(away.every((x, i) => !i || x > away[i - 1]), skin + ': each flow level sits further from the background');
+    const rings = [v['--ink'], v['--match'], v['--f1'], v['--f2'], v['--f3'], v['--f4']].map(x => x.toLowerCase()); // .sel ring, .m ring, shading
+    assert.equal(new Set(rings).size, rings.length, skin + ': rings and shading all differ');
+    assert.notEqual(v['--on'].toLowerCase(), v['--chip'].toLowerCase(), skin + ': selected chips differ from unselected');
+  }
+  assert.equal(SKIN_CSS.midnight['--bg'], '#221A14'); assert.equal(SKIN_CSS.midnight['--f3'], '#8B2E4A'); assert.equal(SKIN_CSS.midnight['--match'], '#F59E0B');
+  assert.equal(SKIN_CSS.cream['--bg'], '#FFF7E6'); assert.equal(SKIN_CSS.cream['--f2'], '#E8A0B4'); assert.equal(SKIN_CSS.cream['--f4'], '#C14A6E'); assert.equal(SKIN_CSS.cream['--match'], '#D97706');
+  // the CSS still draws the selected day and the filter match with different tokens and widths
+  assert.match(css, /\.cal \.d\.sel\{box-shadow:inset 0 0 0 2px var\(--ink\)\}/);
+  assert.match(css, /\.cal \.d\.m\{[^}]*box-shadow:inset 0 0 0 3px var\(--match\)/);
+});
+const memStorage = () => { const m = new Map(); return { getItem: k => m.has(k) ? m.get(k) : null, setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
+test('skin toggle: switches the root attribute, round-trips through the UI key, never touches the data bytes', () => {
+  const meta = {}, root = { dataset: {} };
+  ctx.document = { documentElement: root, querySelector: () => meta }; ctx.localStorage = memStorage();
+  const v1 = storeWith(startsFrom('2026-01-01', [28, 28]), { '2026-01-10': { ...$('blankEntry')(), moodScore: 6, note: 'v1 day' } });
+  $('freezePrediction')(v1, '2026-02-26');
+  const raw = JSON.stringify(v1); // exactly what v1's save() writes
+  ctx.localStorage.setItem($('KEY'), raw);
+  assert.equal($('loadSkin')(), 'midnight', 'missing UI key');
+  for (const bad of ['{oops', 'null', '[]', '{"skin":"neon"}', '{"skin":"constructor"}']) { ctx.localStorage.setItem($('UI_KEY'), bad); assert.equal($('loadSkin')(), 'midnight', bad); }
+  $('setSkin')('cream', true);
+  assert.equal(root.dataset.skin, 'cream'); assert.equal(meta.content, '#FFF7E6');
+  assert.equal(ctx.localStorage.getItem($('UI_KEY')), '{"skin":"cream"}'); assert.equal($('loadSkin')(), 'cream');
+  $('setSkin')('midnight', true);
+  assert.equal(root.dataset.skin, 'midnight'); assert.equal(meta.content, '#221A14'); assert.equal($('loadSkin')(), 'midnight');
+  $('setSkin')('cream', true);
+  assert.equal(ctx.localStorage.getItem($('KEY')), raw, 'data bytes identical after skin changes');
+  // a v1-format store loads unchanged and saves back byte-identical; the skin never enters it (so never into exports)
+  vm.runInContext('store = load(); save()', ctx);
+  assert.equal($('readOnly'), false); assert.equal(JSON.stringify($('store')), raw); assert.equal(ctx.localStorage.getItem($('KEY')), raw);
+  assert.doesNotMatch(raw, /skin|cream|midnight/);
+  assert.notEqual($('UI_KEY'), $('KEY'));
+  // Settings shows the segmented toggle with the current skin selected
+  const h = $('settingsHTML')($('store'), { pendingImport: null, resetStep: 0, msg: '' }, '2026-03-01', 'cream');
+  assert.match(h, /<div class="lbl">Skin<\/div>\n<div class="row"><button class="seg" data-skin="midnight">Honey Midnight<\/button><button class="seg on" data-skin="cream">Honey Cream<\/button><\/div>/);
+  // Reset this app only removes the data key, never the UI key
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  assert.match(script, /'reset' in t\) \{ localStorage\.removeItem\(KEY\);/);
+  assert.doesNotMatch(script, /removeItem\(UI_KEY\)|localStorage\.clear/);
+  delete ctx.document; delete ctx.localStorage;
+});
+
+test('.ics: one discreet all-day event over the predicted window; refused while still learning', () => {
+  const st = storeWith(startsFrom('2026-01-01', [28, 28])); // frozen window Mar 25-27
+  $('freezePrediction')(st, '2026-02-26');
+  const ics = $('icsFor')($('currentPrediction')(st), '2026-03-01');
+  assert.equal(ics, ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Heads-Up Honey//EN', 'BEGIN:VEVENT', 'UID:20260226@heads-up-honey', 'DTSTAMP:20260301T000000Z',
+    'DTSTART;VALUE=DATE:20260325', 'DTEND;VALUE=DATE:20260328', 'SUMMARY:🍯', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n'));
+  assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 1);
+  assert.doesNotMatch(ics, /period|cycle|DESCRIPTION|LOCATION/i);
+  // month rollover: window ending on the 31st ends the day after, in the next month
+  assert.match($('icsFor')({ forCycleStart: '2026-12-01', windowStart: '2026-12-29', windowEnd: '2026-12-31' }, '2026-12-01'), /DTEND;VALUE=DATE:20270101\r\n/);
+  const ui = { pendingImport: null, resetStep: 0, msg: '' };
+  assert.match($('settingsHTML')(st, ui, '2026-03-01', 'midnight'), /<button class="seg" data-ics>Add predicted window to calendar \(\.ics\)<\/button>/);
+  const learning = storeWith(['2026-01-01', '2026-01-29']);
+  assert.equal($('icsFor')($('currentPrediction')(learning), '2026-02-01'), null);
+  const h = $('settingsHTML')(learning, ui, '2026-02-01', 'midnight');
+  assert.match(h, /<button class="seg" data-ics disabled>Add predicted window to calendar \(\.ics\)<\/button>/);
+  assert.match(h, /No prediction yet — the calendar file appears once the app can predict a window\./);
 });
 
 console.log(`\n${n} checks passed`);

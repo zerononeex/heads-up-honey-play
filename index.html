@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-skin="midnight">
 <head>
 <meta charset="utf-8">
 <title>Heads-Up Honey</title>
@@ -10,10 +10,16 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Heads-Up Honey">
-<meta name="theme-color" content="#fff8ea">
+<meta name="theme-color" content="#221A14">
 <style>
-:root{--bg:#fff8ea;--ink:#1b1b1b;--mute:#7a7266;--line:#e4dccb;--chip:#f3ecdd;--on:#1b1b1b;--onink:#fff8ea;
-  --f1:#f6c9c9;--f2:#ee9e9e;--f3:#dd6b6b;--f4:#b83f3f;--match:#2f6fd6;--matchbg:#d8e5fb}
+/* Skins = custom properties switched by <html data-skin>. --ink text, --chip surface, --on accent/selected,
+   --f1..4 flow shading (deepens with flow), --match filter ring, --hatch predicted-window stripes. */
+:root{color-scheme:dark;--bg:#221A14;--ink:#FFF7E6;--mute:#CBB79E;--line:#4A3A2D;--chip:#2E231B;--on:#F59E0B;--onink:#221A14;
+  --f1:#4E2534;--f2:#6C2A40;--f3:#8B2E4A;--f4:#B03A60;--onflow:#FFF7E6;--match:#F59E0B;--matchbg:#4A3418;
+  --hatch:rgba(255,247,230,.22);--warn:#F2A0B0;--pot:#D9A066;--wood:#C08A55}
+:root[data-skin="cream"]{color-scheme:light;--bg:#FFF7E6;--ink:#3B2A1A;--mute:#8A7258;--line:#EADBC0;--chip:#FFFDF8;--on:#D97706;--onink:#FFFDF8;
+  --f1:#F6D3DD;--f2:#E8A0B4;--f3:#D97A95;--f4:#C14A6E;--onflow:#fff;--match:#D97706;--matchbg:#FDE7C2;
+  --hatch:rgba(59,42,26,.18);--warn:#A33;--pot:#8A5A2B;--wood:#B07A45}
 *{box-sizing:border-box;margin:0}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -23,8 +29,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 header{display:flex;align-items:center;gap:10px;min-height:52px}
 header b{display:block;font-size:17px}
 header svg{flex:none}
-.spark{animation:blink .8s infinite alternate}
-@keyframes blink{to{opacity:.2}}
 header small{color:var(--mute);font-size:12px}
 #v-cal{flex:1;min-height:0;display:flex;flex-direction:column}
 #panel{flex:1;min-height:0;overflow-y:auto;border-top:1px solid var(--line);margin-top:4px;padding:6px 0 12px}
@@ -33,8 +37,8 @@ header small{color:var(--mute);font-size:12px}
 .logged{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
 .row{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}
 .lbl{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-top:6px}
-.chip,.seg{padding:5px 9px;border-radius:14px;background:var(--chip);font-size:13px}
-.chip.on,.seg.on{background:var(--on);color:var(--onink)}
+.chip,.seg{padding:5px 9px;border-radius:14px;background:var(--chip);box-shadow:inset 0 0 0 1px var(--line);font-size:13px}
+.chip.on,.seg.on{background:var(--on);color:var(--onink);font-weight:600}
 .seg{border-radius:6px;flex:1;padding:6px 2px;text-align:center}
 button:disabled{opacity:.4}
 /* ponytail: circles are drawn ~28px for density but each button is a full-width slice 42px tall, so the
@@ -61,19 +65,19 @@ nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;
 nav button.on{color:var(--ink);font-weight:600}
 nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .back{font-size:13px;padding:4px 0;color:var(--match)}
-#q{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+#q{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--chip)}
 .sum{font-weight:600;margin:8px 0 4px}
 .res{display:block;width:100%;text-align:left;padding:6px 2px;border-bottom:1px solid var(--line)}
 .res small{display:block;color:var(--mute)}
 .mhead{font-size:11px;color:var(--mute);text-transform:uppercase;margin-top:8px}
 .set{margin:12px 0}
 .set .row .seg{flex:1}
-.view .warn{color:#a33}
+.view .warn{color:var(--warn)}
 #banner{display:flex;align-items:center;gap:6px;background:var(--chip);border-radius:8px;padding:6px 8px;margin:2px 0 4px;font-size:13px}
 #banner [data-checkin]{flex:1;text-align:left}
 #banner .x{color:var(--mute);font-size:12px;white-space:nowrap}
 .mood.flash{outline:2px solid var(--ink);border-radius:8px}
-#note{width:100%;margin-top:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;font:inherit}
+#note{width:100%;margin-top:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--chip);color:inherit;font:inherit}
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin:2px 0}
 .cal-head b{font-size:14px}
 .cal-head button{width:36px;height:30px;font-size:18px}
@@ -82,8 +86,8 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 .cal .d{position:relative;height:34px;border-radius:6px;font-size:13px;text-align:center}
 .cal .d.today{font-weight:700;text-decoration:underline}
 .cal .d.m{background-color:var(--matchbg);box-shadow:inset 0 0 0 3px var(--match);font-weight:700}
-.cal .d.f1{background:var(--f1)}.cal .d.f2{background:var(--f2)}.cal .d.f3{background:var(--f3);color:#fff}.cal .d.f4{background:var(--f4);color:#fff}
-.cal .d.pw{background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(0,0,0,.16) 4px 6px)}
+.cal .d.f1{background:var(--f1)}.cal .d.f2{background:var(--f2)}.cal .d.f3{background:var(--f3);color:var(--onflow)}.cal .d.f4{background:var(--f4);color:var(--onflow)}
+.cal .d.pw{background-image:repeating-linear-gradient(135deg,transparent 0 4px,var(--hatch) 4px 6px)}
 .cal .d.sel{box-shadow:inset 0 0 0 2px var(--ink)}
 .cal .d i{position:absolute;top:1px;right:3px;font-size:9px;font-style:normal;opacity:.8}
 </style>
@@ -112,6 +116,9 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 </main>
 <script>
 const KEY = 'heads-up-honey-data-v1';
+// Per-device UI prefs live in their own key: never in the data store, never in export/import.
+const UI_KEY = 'heads-up-honey-ui-v1';
+const SKINS = { midnight: ['Honey Midnight', '#221A14'], cream: ['Honey Cream', '#FFF7E6'] }; // label, theme-color
 const FLOWS = ['None', 'Spotting', 'Light', 'Medium', 'Heavy'];
 // Fixed v1 chip sets (no editor by design). Field name -> [heading, items]; perimeno items carry subgroup headings.
 const GROUPS = [
@@ -211,23 +218,22 @@ function status(st, today) {
   if (last && last <= today && today <= end) return { state: 'period', line1: 'Day ' + (diffDays(last, today) + 1), line2: p ? 'Next expected ' + range(p) : '' };
   if (!p) return { state: 'far', line1: 'Still learning', line2: '' };
   const du = diffDays(today, p.windowStart), line2 = 'Expected ' + range(p);
-  if (du >= 1) return { state: du > 10 ? 'far' : du >= 5 ? 'approaching' : 'close', days: du, line1: 'T-minus ' + nDays(du), line2, fill: Math.min(1, Math.max(0, diffDays(last, today) / diffDays(last, p.windowStart))) };
-  // ponytail: after the window ends with nothing logged the bomb stays lit; no "late" alarm copy
+  if (du >= 1) return { state: du > 10 ? 'far' : du >= 5 ? 'approaching' : 'close', days: du, line1: 'T-minus ' + nDays(du), line2 };
+  // ponytail: after the window ends with nothing logged the pot stays full; no "late" alarm copy
   return today <= p.windowEnd ? { state: 'window', days: du, line1: 'In the window', line2 } : { state: 'past', days: du, line1: 'Window passed', line2 };
 }
 
-// Bomb: far/period = small outline, approaching = thicker outline filling from the bottom,
-// close = solid + unlit fuse, window/past = biggest with a lit fuse.
-function bombSVG(h) {
-  const st = h.state, solid = st === 'close' || st === 'window' || st === 'past', lit = st === 'window' || st === 'past';
-  const size = { far: 34, period: 34, approaching: 40, close: 46 }[st] || 52, fill = st === 'approaching' ? h.fill : solid ? 1 : 0;
-  return `<svg data-state="${st}" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true">
-<clipPath id="bf"><rect x="0" y="${58 - 40 * fill}" width="64" height="${40 * fill}"/></clipPath>
-<circle cx="28" cy="38" r="20" fill="#1b1b1b" clip-path="url(#bf)"/>
-<circle cx="28" cy="38" r="${solid ? 20 : 19}" fill="none" stroke="#1b1b1b" stroke-width="${st === 'approaching' ? 3.5 : 2}"/>
-<rect x="34" y="13" width="11" height="8" rx="1.5" fill="${solid ? '#1b1b1b' : 'none'}" stroke="#1b1b1b" stroke-width="2"/>
-${solid ? '<path d="M41 13 q4 -8 12 -7" fill="none" stroke="#6b5640" stroke-width="2.5"/>' : ''}
-${lit ? '<g class="spark" fill="#f0962a"><circle cx="54" cy="6" r="4"/><circle cx="60" cy="3" r="1.5"/><circle cx="59" cy="11" r="1.5"/><circle cx="49" cy="2" r="1.5"/></g>' : ''}</svg>`;
+// Honey pot: the countdown visual. Level from the same status() state: far/learning/period = empty outline,
+// approaching = bottom third, close = two-thirds + dipper, window/past = full + drip + dipper.
+const POT = 'M21 19C21 23 9 27 9 41C9 53 19 59 32 59C45 59 55 53 55 41C55 27 43 23 43 19Z';
+function potSVG(h) {
+  const st = h.state, lvl = { approaching: 1 / 3, close: 2 / 3, window: 1, past: 1 }[st] || 0, y = 59 - 40 * lvl;
+  return `<svg data-state="${st}" data-level="${lvl.toFixed(2)}" width="48" height="48" viewBox="0 0 64 64" aria-hidden="true">
+<clipPath id="pf"><path d="${POT}"/></clipPath>
+${lvl ? `<g clip-path="url(#pf)"><rect y="${y}" width="64" height="${40 * lvl}" fill="#F59E0B"/><rect y="${y}" width="64" height="2.5" fill="#D97706"/></g>` : ''}
+<g fill="none" stroke-width="2.4"><path d="${POT}" stroke="var(--pot)" stroke-linejoin="round"/><rect x="17" y="14" width="30" height="5" rx="2.5" stroke="var(--pot)"/>
+${lvl > .5 ? '<g class="dipper" stroke="var(--wood)" stroke-linecap="round"><path d="M12 15L48 5"/><g transform="rotate(-15 52 5)"><rect x="47" y="1" width="11" height="8" rx="3.5"/><path d="M50.5 2.5v6M54 1.6v6"/></g></g>' : ''}</g>
+${lvl === 1 ? '<g class="drip" fill="#F59E0B"><path d="M17.5 17.5C16 22 8 24 6.5 31" fill="none" stroke="#F59E0B" stroke-width="2.6" stroke-linecap="round"/><circle cx="6.3" cy="33" r="2.6"/></g>' : ''}</svg>`;
 }
 // Home Screen badge = days until the window (1-9). Silently no-ops where unsupported.
 // ponytail: inside the window the badge is a plain dot (setAppBadge() with no count) until a start is logged or the window passes
@@ -253,27 +259,27 @@ const rolling = sc => sc.map((_, i) => { const w = sc.slice(Math.max(0, i - 2), 
 const W = 340, X0 = 18; // strip geometry: mood axis 1-10 on top (y 6..66), flow bars below (y 72..96)
 const moodY = v => 6 + (10 - v) * 60 / 9;
 const line = (pts, attrs) => pts.length > 1 ? `<polyline points="${pts.join(' ')}" fill="none" ${attrs}/>` : '';
-const axis = `<text x="0" y="${moodY(10) + 3}" font-size="8" fill="#7a7266">10</text><text x="4" y="${moodY(1) + 3}" font-size="8" fill="#7a7266">1</text>`;
+const axis = `<text x="0" y="${moodY(10) + 3}" font-size="8" fill="var(--mute)">10</text><text x="4" y="${moodY(1) + 3}" font-size="8" fill="var(--mute)">1</text>`;
 function stripSVG(c, days, preds, today) {
   const p = preds.find(q => q.forCycleStart === c.start);
   const len = c.length || Math.max(diffDays(c.start, today) + 1, p ? diffDays(c.start, p.windowEnd) + 1 : 1);
   const dx = (W - X0) / len, x = i => X0 + i * dx + dx / 2, ds = [...Array(len)].map((_, i) => days[addDays(c.start, i)] || {});
   const avg = rolling(ds.map(e => e.moodScore ?? null));
-  let h = `<svg class="strip" viewBox="0 0 ${W} 100">${axis}<line x1="${X0}" x2="${W}" y1="69" y2="69" stroke="#e4dccb"/>`;
-  if (p) h += `<rect x="${X0 + diffDays(c.start, p.windowStart) * dx}" y="0" width="${(diffDays(p.windowStart, p.windowEnd) + 1) * dx}" height="100" fill="rgba(0,0,0,.07)"/>`;
+  let h = `<svg class="strip" viewBox="0 0 ${W} 100">${axis}<line x1="${X0}" x2="${W}" y1="69" y2="69" stroke="var(--line)"/>`;
+  if (p) h += `<rect x="${X0 + diffDays(c.start, p.windowStart) * dx}" y="0" width="${(diffDays(p.windowStart, p.windowEnd) + 1) * dx}" height="100" fill="var(--hatch)" opacity=".4"/>`;
   ds.forEach((e, i) => {
     if (e.flow) h += `<rect x="${x(i) - dx * .4}" y="${96 - e.flow * 6}" width="${dx * .8}" height="${e.flow * 6}" fill="var(--f${e.flow})"/>`;
-    if (e.moodScore) h += `<circle cx="${x(i)}" cy="${moodY(e.moodScore)}" r="2.2" fill="#1b1b1b"/>`;
+    if (e.moodScore) h += `<circle cx="${x(i)}" cy="${moodY(e.moodScore)}" r="2.2" fill="var(--ink)"/>`;
   });
-  return h + line(avg.flatMap((v, i) => v == null ? [] : [`${x(i)},${moodY(v)}`]), 'stroke="#1b1b1b" stroke-width="1.2" opacity=".6"') + '</svg>';
+  return h + line(avg.flatMap((v, i) => v == null ? [] : [`${x(i)},${moodY(v)}`]), 'stroke="var(--ink)" stroke-width="1.2" opacity=".6"') + '</svg>';
 }
 // Compare: completed cycles' mood lines aligned so x=0 is the next start (days before next period)
 function compareSVG(cs, days) {
   const done = cs.filter(c => c.length), max = Math.max(...done.map(c => c.length)), dx = (W - X0) / max;
   return `<svg class="strip" viewBox="0 0 ${W} 72">${axis}` + done.map((c, k) => {
     const avg = rolling([...Array(c.length)].map((_, i) => (days[addDays(c.start, i)] || {}).moodScore ?? null));
-    return line(avg.flatMap((v, i) => v == null ? [] : [`${X0 + (max - c.length + i + .5) * dx},${moodY(v)}`]), `stroke="#1b1b1b" stroke-width="1.2" opacity="${(.25 + .75 * (k + 1) / done.length).toFixed(2)}"`);
-  }).join('') + `<text x="${W}" y="70" font-size="8" fill="#7a7266" text-anchor="end">next start</text></svg>`;
+    return line(avg.flatMap((v, i) => v == null ? [] : [`${X0 + (max - c.length + i + .5) * dx},${moodY(v)}`]), `stroke="var(--ink)" stroke-width="1.2" opacity="${(.25 + .75 * (k + 1) / done.length).toFixed(2)}"`);
+  }).join('') + `<text x="${W}" y="70" font-size="8" fill="var(--mute)" text-anchor="end">next start</text></svg>`;
 }
 function cyclesHTML(st, today, sel, compare) {
   const cs = cycles(st.days), p = currentPrediction(st);
@@ -356,14 +362,26 @@ function checkinDue(st, today, hour) {
   if (s.moodCheckMode === 'daily') return true;
   return !!(last && last <= today && diffDays(last, today) <= 2) || !!(p && today >= addDays(p.windowStart, -7));
 }
+// Calendar file: one discreet all-day event over the predicted window (DTEND is the day after, per iCalendar).
+// ponytail: no auto-sync because there is no server; regenerate by hand once per new prediction. A Scriptable widget is a possible later step, not v1.1
+function icsFor(p, today) {
+  const d = s => s.replace(/-/g, '');
+  return p && ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Heads-Up Honey//EN', 'BEGIN:VEVENT', `UID:${d(p.forCycleStart)}@heads-up-honey`, `DTSTAMP:${d(today)}T000000Z`,
+    `DTSTART;VALUE=DATE:${d(p.windowStart)}`, `DTEND;VALUE=DATE:${d(addDays(p.windowEnd, 1))}`, 'SUMMARY:🍯', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
+}
 const pause = (st, today) => { st.settings.moodCheckPausedUntil = addDays(today, 7); };
-function settingsHTML(st, u, today) {
-  const m = st.settings.moodCheckMode, pu = st.settings.moodCheckPausedUntil;
+function settingsHTML(st, u, today, skin) {
+  const m = st.settings.moodCheckMode, pu = st.settings.moodCheckPausedUntil, p = currentPrediction(st);
   const imp = u.pendingImport, rs = ['Reset this app’s data', 'Erase all Heads-Up Honey data?', 'Really erase? This cannot be undone.'][u.resetStep];
   return `<h2>Settings</h2>
+<div class="set"><div class="lbl">Skin</div>
+<div class="row">${Object.entries(SKINS).map(([k, [t]]) => `<button class="seg${skin === k ? ' on' : ''}" data-skin="${k}">${t}</button>`).join('')}</div></div>
 <div class="set"><div class="lbl">Evening mood check-in</div>
 <div class="row">${['off', 'window', 'daily'].map(x => `<button class="seg${m === x ? ' on' : ''}" data-mode="${x}">${{ off: 'Off', window: 'Window', daily: 'Daily' }[x]}</button>`).join('')}</div>
 <div class="row">${pu && pu > today ? `<p>Paused until ${fmt(pu)}</p><button class="chip" data-resume>Resume</button>` : '<button class="chip" data-pause>Pause mood check-ins 7 days</button>'}</div></div>
+<div class="set"><div class="lbl">Calendar</div>
+<div class="row"><button class="seg" data-ics${p ? '' : ' disabled'}>Add predicted window to calendar (.ics)</button></div>
+${p ? '' : '<p>No prediction yet — the calendar file appears once the app can predict a window.</p>'}</div>
 <div class="set"><div class="lbl">Backup</div>
 <div class="row"><button class="seg" data-export="json">Export JSON</button><button class="seg" data-export="csv">Export CSV</button><label class="seg">Import JSON<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
 ${imp ? `<p class="warn">Replace everything on this phone with the file (${nDays(Object.keys(imp.days).length)})?</p><div class="row"><button class="seg" data-import-ok>Replace current data</button><button class="seg" data-import-cancel>Cancel</button></div>` : ''}
@@ -412,6 +430,13 @@ function load() {
   catch (e) { readOnly = true; alert('Saved data could not be read, so nothing will be saved over it. ' + e.message); return blankStore(); }
 }
 function save() { if (!readOnly) localStorage.setItem(KEY, JSON.stringify(store)); }
+// A missing or corrupt UI key falls back to Honey Midnight.
+const loadSkin = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)).skin === 'cream' ? 'cream' : 'midnight'; } catch (e) { return 'midnight'; } };
+function setSkin(s, keep) {
+  document.documentElement.dataset.skin = s;
+  document.querySelector('meta[name="theme-color"]').content = SKINS[s][1];
+  if (keep) try { localStorage.setItem(UI_KEY, JSON.stringify({ skin: s })); } catch (e) { /* private mode: skin lasts this session */ }
+}
 
 // Every tap goes through here: mutate the selected day, drop it if empty, save instantly.
 function edit(fn) {
@@ -431,11 +456,11 @@ function download(name, text, type) {
 }
 function render() {
   const h = status(store, todayISO());
-  $('hdr').innerHTML = `${bombSVG(h)}<div><b>${h.line1}</b><small>${h.line2}</small></div>`;
+  $('hdr').innerHTML = `${potSVG(h)}<div><b>${h.line1}</b><small>${h.line2}</small></div>`;
   badge(h);
   $('banner').hidden = dismissedOn() === todayISO() || !checkinDue(store, todayISO(), new Date().getHours());
   $('v-cycles').innerHTML = cyclesHTML(store, todayISO(), ui.cyc, ui.compare);
-  $('v-settings').innerHTML = settingsHTML(store, sui, todayISO());
+  $('v-settings').innerHTML = settingsHTML(store, sui, todayISO(), document.documentElement.dataset.skin);
   $('f-body').innerHTML = filterHTML(store, filt, todayISO());
   for (const v of ['cal', 'filter', 'cycles', 'settings']) $('v-' + v).hidden = ui.view !== v;
   $('back').hidden = !ui.back;
@@ -446,6 +471,7 @@ function render() {
 
 function init() {
   store = load();
+  setSkin(loadSkin());
   ui.selected = todayISO(); ui.month = filt.month = ui.selected.slice(0, 7);
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button,tr[data-cyc]'); if (!b) return;
@@ -456,13 +482,16 @@ function init() {
     else if (t.date && inFilter) jump(ui, t.date);
     else if (t.date) ui.selected = t.date;
     else if (t.tag) { filt.tag = filt.tag === t.tag ? null : t.tag; const m = matchDays(store.days, filt.tag, filt.q)[0]; if (m) filt.month = m.slice(0, 7); }
+    else if (t.skin) setSkin(t.skin, true);
     else if (t.mode) { store.settings.moodCheckMode = t.mode; save(); }
     else if ('pause' in t) { pause(store, todayISO()); save(); }
     else if ('resume' in t) { store.settings.moodCheckPausedUntil = null; save(); }
     else if (t.export) download(`heads-up-honey-${todayISO()}.${t.export}`, t.export === 'json' ? JSON.stringify(store, null, 1) : toCSV(store.days), t.export === 'json' ? 'application/json' : 'text/csv');
+    else if ('ics' in t) download('honey.ics', icsFor(currentPrediction(store), todayISO()), 'text/calendar;charset=utf-8');
     else if ('importOk' in t) { store = sui.pendingImport; sui.pendingImport = null; readOnly = false; save(); sui.msg = 'Backup imported.'; }
     else if ('importCancel' in t) sui.pendingImport = null;
     else if ('reset' in t && sui.resetStep < 2) sui.resetStep++;
+    // Reset clears the data key only (as in v1); the skin in UI_KEY is a device preference and stays.
     else if ('reset' in t) { localStorage.removeItem(KEY); store = blankStore(); readOnly = false; sui.resetStep = 0; sui.msg = 'Heads-Up Honey data erased.'; }
     else if ('resetCancel' in t) sui.resetStep = 0;
     else if ('checkin' in t) {
