@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Heads-Up Honey</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Heads-Up Honey">
+<meta name="theme-color" content="#fff8ea">
+<style>
+:root{--bg:#fff8ea;--ink:#1b1b1b;--mute:#7a7266;--line:#e4dccb;--chip:#f3ecdd;--on:#1b1b1b;--onink:#fff8ea;
+  --f1:#f6c9c9;--f2:#ee9e9e;--f3:#dd6b6b;--f4:#b83f3f;--match:#2f6fd6;--matchbg:#d8e5fb}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.3 -apple-system,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+#app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 6px) 8px 0}
+header{display:flex;align-items:center;gap:10px;min-height:52px}
+header b{display:block;font-size:17px}
+header svg{flex:none}
+.spark{animation:blink .8s infinite alternate}
+@keyframes blink{to{opacity:.2}}
+header small{color:var(--mute);font-size:12px}
+#v-cal{flex:1;min-height:0;display:flex;flex-direction:column}
+#panel{flex:1;min-height:0;overflow-y:auto;border-top:1px solid var(--line);margin-top:4px;padding:6px 0 12px}
+.ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.ph b{font-size:15px}
+.logged{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.row{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}
+.lbl{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-top:6px}
+.chip,.seg{padding:5px 9px;border-radius:14px;background:var(--chip);font-size:13px}
+.chip.on,.seg.on{background:var(--on);color:var(--onink)}
+.seg{border-radius:6px;flex:1;padding:6px 2px;text-align:center}
+button:disabled{opacity:.4}
+/* ponytail: circles are drawn ~28px for density but each button is a full-width slice 42px tall, so the
+   hit area meets Apple's 44pt guideline in height and is ~1/10 row wide; upgrade = bigger circles if misses happen */
+.mood{display:flex;margin:2px 0}
+.mood button{flex:1;height:42px;display:flex;align-items:center;justify-content:center}
+.mood span{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:12px}
+.mood .on span{background:var(--on);color:var(--onink)}
+.peri-h{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.peri-h button{font-size:13px;color:var(--mute);padding:6px 0}
+.sub{font-size:11px;color:var(--mute);width:100%;margin-top:2px}
+.view{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px}
+.view h2{font-size:16px;margin:4px 0 6px}
+.view p{color:var(--mute);font-size:13px;margin:4px 0}
+.strip-head{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.strip-head button{width:36px;height:30px;font-size:18px}
+.strip{width:100%;height:auto;display:block}
+.clist{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.clist td,.clist th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+.clist th{font-size:11px;color:var(--mute);font-weight:400}
+.clist tr.on td{font-weight:700}
+nav{display:flex;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);background:var(--bg)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 0 4px;font-size:10px;color:var(--mute)}
+nav button.on{color:var(--ink);font-weight:600}
+nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.back{font-size:13px;padding:4px 0;color:var(--match)}
+#q{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+.sum{font-weight:600;margin:8px 0 4px}
+.res{display:block;width:100%;text-align:left;padding:6px 2px;border-bottom:1px solid var(--line)}
+.res small{display:block;color:var(--mute)}
+.mhead{font-size:11px;color:var(--mute);text-transform:uppercase;margin-top:8px}
+.set{margin:12px 0}
+.set .row .seg{flex:1}
+.view .warn{color:#a33}
+#banner{display:flex;align-items:center;gap:6px;background:var(--chip);border-radius:8px;padding:6px 8px;margin:2px 0 4px;font-size:13px}
+#banner [data-checkin]{flex:1;text-align:left}
+#banner .x{color:var(--mute);font-size:12px;white-space:nowrap}
+.mood.flash{outline:2px solid var(--ink);border-radius:8px}
+#note{width:100%;margin-top:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;font:inherit}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin:2px 0}
+.cal-head b{font-size:14px}
+.cal-head button{width:36px;height:30px;font-size:18px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal .dow{font-size:10px;color:var(--mute);text-align:center}
+.cal .d{position:relative;height:34px;border-radius:6px;font-size:13px;text-align:center}
+.cal .d.today{font-weight:700;text-decoration:underline}
+.cal .d.m{background-color:var(--matchbg);box-shadow:inset 0 0 0 3px var(--match);font-weight:700}
+.cal .d.f1{background:var(--f1)}.cal .d.f2{background:var(--f2)}.cal .d.f3{background:var(--f3);color:#fff}.cal .d.f4{background:var(--f4);color:#fff}
+.cal .d.pw{background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(0,0,0,.16) 4px 6px)}
+.cal .d.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal .d i{position:absolute;top:1px;right:3px;font-size:9px;font-style:normal;opacity:.8}
+</style>
+</head>
+<body>
+<main id="app">
+  <section id="v-cal">
+    <button class="back" id="back" data-view="filter" hidden>‹ Back to filter</button>
+    <header id="hdr"></header>
+    <div id="banner" hidden><button data-checkin>Evening check-in — if it comes up naturally, grab a mood out of 10.</button><button class="x" data-week>Don’t ask this week</button><button class="x" data-dismiss aria-label="Dismiss">✕</button></div>
+    <div id="cal"></div>
+    <div id="panel"></div>
+  </section>
+  <section id="v-filter" class="view" hidden>
+    <input id="q" type="search" placeholder="Search tags and notes" autocomplete="off">
+    <div id="f-body"></div>
+  </section>
+  <section id="v-cycles" class="view" hidden></section>
+  <section id="v-settings" class="view" hidden></section>
+  <nav>
+    <button data-view="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar</button>
+    <button data-view="filter"><svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>Filter</button>
+    <button data-view="cycles"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.3"/><path d="M20 4v5h-5"/></svg>Cycles</button>
+    <button data-view="settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</button>
+  </nav>
+</main>
+<script>
+const KEY = 'heads-up-honey-data-v1';
+const FLOWS = ['None', 'Spotting', 'Light', 'Medium', 'Heavy'];
+// Fixed v1 chip sets (no editor by design). Field name -> [heading, items]; perimeno items carry subgroup headings.
+const GROUPS = [
+  ['moodWords', 'Mood words', ['Calm', 'Happy', 'Irritable', 'Sad', 'Tired', 'Sensitive', 'Moody', 'Stressed', 'Cranky', 'Emotional']],
+  ['feelings', 'Feelings', ['Overwhelmed', 'Frustrated', 'Lonely', 'Supported', 'Loved', 'Confident', 'Relaxed', 'On edge']],
+  ['symptoms', 'Body', ['Cramps', 'Headache', 'Backache', 'Nausea', 'Fatigue', 'Hot flashes', 'Dizzy', 'Cravings', 'Tender', 'Sore joints']],
+  ['energyDay', 'Energy & day', ['Energy high', 'Energy low', 'Slept badly', 'Exercised', 'Painkillers taken']],
+];
+const PERI = [
+  ['Heat & sleep', ['Night sweats', 'Cold flashes / clammy', 'Trouble sleeping']],
+  ['Mind', ['Brain fog', 'Forgetfulness', 'Trouble concentrating', 'Mood swings', 'Low mood']],
+  ['Body', ['Muscle aches', 'Dry skin', 'Itchy skin', 'Hair thinning', 'Palpitations', 'Restless legs', 'UTIs', 'Urinary urgency']],
+  ['Cycle', ['Irregular periods', 'Heavier flow', 'Lighter flow', 'Longer cycle', 'Shorter cycle', 'Skipped period', 'Spotting between periods', 'Clotting']],
+  ['Sensitive', ['Vaginal dryness', 'Reduced libido', 'Weight gain']],
+];
+const TAGS = Object.fromEntries([...GROUPS.map(([f, , items]) => [f, items]), ['perimeno', PERI.flatMap(g => g[1])]]);
+
+// ---- dates: ISO "YYYY-MM-DD" strings everywhere; UTC math so DST never shifts a day
+const D = s => Date.UTC(+s.slice(0, 4), s.slice(5, 7) - 1, +s.slice(8, 10));
+const iso = t => new Date(t).toISOString().slice(0, 10);
+const addDays = (s, n) => iso(D(s) + n * 864e5);
+const diffDays = (a, b) => Math.round((D(b) - D(a)) / 864e5);
+const todayISO = () => { const d = new Date(); return iso(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); };
+const nDays = n => n + (n === 1 ? ' day' : ' days');
+const fmt = (s, o = { month: 'short', day: 'numeric' }) => new Date(D(s)).toLocaleDateString('en-US', { timeZone: 'UTC', ...o });
+
+// ---- storage
+const blankEntry = () => ({ flow: 0, moodScore: null, moodWords: [], feelings: [], symptoms: [], energyDay: [], perimeno: [], note: '', source: 'tap' });
+const isEmpty = e => !e.flow && e.moodScore == null && !e.note && Object.keys(TAGS).every(f => !e[f].length);
+const blankStore = () => ({ version: 1, days: {}, settings: { moodCheckMode: 'window', moodCheckPausedUntil: null }, predictions: [] });
+// Migration guard: every future shape change adds a step here; unknown versions are refused, never overwritten.
+function migrate(s) {
+  if (s && s.version === 1) return s;
+  throw new Error('Unknown data version ' + (s && s.version));
+}
+
+// ---- calendar (one render path, also used by the Filter screen)
+function calHTML(ym, o) {
+  const first = ym + '-01', start = addDays(first, -new Date(D(first)).getUTCDay());
+  let h = 'SMTWTFS'.split('').map(c => `<div class="dow">${c}</div>`).join('');
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(start, i);
+    if (i >= 35 && d.slice(0, 7) !== ym) break;
+    if (d.slice(0, 7) !== ym) { h += '<div></div>'; continue; }
+    const e = o.days[d] || {}, c = ['d'];
+    if (e.flow) c.push('f' + e.flow);
+    if (o.win && o.win.windowStart <= d && d <= o.win.windowEnd) c.push('pw');
+    if (d === o.today) c.push('today');
+    if (d === o.selected) c.push('sel');
+    if (o.match && o.match.has(d)) c.push('m');
+    h += `<button class="${c.join(' ')}" data-date="${d}">${+d.slice(8)}${e.moodScore ? `<i>${e.moodScore}</i>` : ''}</button>`;
+  }
+  return `<div class="cal-head"><button data-month="-1" aria-label="Previous month">‹</button><b>${fmt(first, { month: 'long', year: 'numeric' })}</b><button data-month="1" aria-label="Next month">›</button></div><div class="cal">${h}</div>`;
+}
+const shiftMonth = (ym, n) => addDays(ym + '-15', n * 30.5 | 0).slice(0, 7); // ponytail: mid-month + ~30.5d always lands in the adjacent month
+
+// ---- period days: a start is flow>=1 with no flow the day before; an end is flow>=1 with none the day after
+const flowOf = (days, d) => (days[d] || {}).flow || 0;
+const isStart = (days, d) => flowOf(days, d) > 0 && !flowOf(days, addDays(d, -1));
+const isEnd = (days, d) => flowOf(days, d) > 0 && !flowOf(days, addDays(d, 1));
+// ponytail: Started/Ended write flow Medium on empty days (Ended fills back to the start, max 14 days); adjust per day with the flow control
+function periodTap(days, d, which) {
+  const set = (x, f) => { days[x] = { ...blankEntry(), ...days[x], flow: f }; };
+  if (which === 'start' ? isStart(days, d) : isEnd(days, d)) return set(d, 0);
+  if (which === 'start') return set(d, flowOf(days, d) || 3);
+  let s = d;
+  for (let i = 1; i <= 14; i++) if (flowOf(days, addDays(d, -i))) { s = addDays(d, 1 - i); break; }
+  for (let x = s; x <= d; x = addDays(x, 1)) set(x, flowOf(days, x) || 3);
+}
+
+// ---- prediction (period-start window only; no ovulation/fertility in v1)
+const periodStarts = days => Object.keys(days).sort().filter(d => isStart(days, d));
+// ponytail: even counts round the mean of the two middle values to a whole day (no decimals anywhere in v1)
+const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
+function predict(starts) {
+  const lens = starts.slice(1).map((s, i) => diffDays(starts[i], s)).slice(-6);
+  if (lens.length < 2) return null; // still learning: never invent a 28-day default
+  const med = median(lens), spread = Math.min(4, Math.max(1, Math.round((Math.max(...lens) - Math.min(...lens)) / 2)));
+  const c = addDays(starts.at(-1), med);
+  return { forCycleStart: starts.at(-1), windowStart: addDays(c, -spread), windowEnd: addDays(c, spread), medianUsed: med, cyclesUsed: lens.length };
+}
+// Frozen log: when a new latest start appears, append its prediction once from data available now; never edit it later.
+function freezePrediction(st, today) {
+  const starts = periodStarts(st.days), last = starts.at(-1);
+  if (!last || st.predictions.some(p => p.forCycleStart === last)) return;
+  const p = predict(starts);
+  if (p) st.predictions.push({ madeOn: today, ...p });
+}
+const currentPrediction = st => { const starts = periodStarts(st.days); return st.predictions.find(p => p.forCycleStart === starts.at(-1)) || predict(starts); };
+const range = p => `${fmt(p.windowStart)} – ${fmt(p.windowEnd)}`;
+// Header state. Discreet by design: nothing returned here says "period".
+// ponytail: "in a cycle's bleed" = today is logged with flow in the latest run; an unlogged today reads as the next cycle
+function status(st, today) {
+  const days = st.days, last = periodStarts(days).at(-1), p = currentPrediction(st);
+  let end = last;
+  while (end && flowOf(days, addDays(end, 1))) end = addDays(end, 1);
+  if (last && last <= today && today <= end) return { state: 'period', line1: 'Day ' + (diffDays(last, today) + 1), line2: p ? 'Next expected ' + range(p) : '' };
+  if (!p) return { state: 'far', line1: 'Still learning', line2: '' };
+  const du = diffDays(today, p.windowStart), line2 = 'Expected ' + range(p);
+  if (du >= 1) return { state: du > 10 ? 'far' : du >= 5 ? 'approaching' : 'close', days: du, line1: 'T-minus ' + nDays(du), line2, fill: Math.min(1, Math.max(0, diffDays(last, today) / diffDays(last, p.windowStart))) };
+  // ponytail: after the window ends with nothing logged the bomb stays lit; no "late" alarm copy
+  return today <= p.windowEnd ? { state: 'window', days: du, line1: 'In the window', line2 } : { state: 'past', days: du, line1: 'Window passed', line2 };
+}
+
+// Bomb: far/period = small outline, approaching = thicker outline filling from the bottom,
+// close = solid + unlit fuse, window/past = biggest with a lit fuse.
+function bombSVG(h) {
+  const st = h.state, solid = st === 'close' || st === 'window' || st === 'past', lit = st === 'window' || st === 'past';
+  const size = { far: 34, period: 34, approaching: 40, close: 46 }[st] || 52, fill = st === 'approaching' ? h.fill : solid ? 1 : 0;
+  return `<svg data-state="${st}" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true">
+<clipPath id="bf"><rect x="0" y="${58 - 40 * fill}" width="64" height="${40 * fill}"/></clipPath>
+<circle cx="28" cy="38" r="20" fill="#1b1b1b" clip-path="url(#bf)"/>
+<circle cx="28" cy="38" r="${solid ? 20 : 19}" fill="none" stroke="#1b1b1b" stroke-width="${st === 'approaching' ? 3.5 : 2}"/>
+<rect x="34" y="13" width="11" height="8" rx="1.5" fill="${solid ? '#1b1b1b' : 'none'}" stroke="#1b1b1b" stroke-width="2"/>
+${solid ? '<path d="M41 13 q4 -8 12 -7" fill="none" stroke="#6b5640" stroke-width="2.5"/>' : ''}
+${lit ? '<g class="spark" fill="#f0962a"><circle cx="54" cy="6" r="4"/><circle cx="60" cy="3" r="1.5"/><circle cx="59" cy="11" r="1.5"/><circle cx="49" cy="2" r="1.5"/></g>' : ''}</svg>`;
+}
+// Home Screen badge = days until the window (1-9). Silently no-ops where unsupported.
+// ponytail: inside the window the badge is a plain dot (setAppBadge() with no count) until a start is logged or the window passes
+function badge(h) {
+  try {
+    if (!('setAppBadge' in navigator)) return;
+    const r = h.days >= 1 && h.days <= 9 ? navigator.setAppBadge(h.days) : h.state === 'window' ? navigator.setAppBadge() : navigator.clearAppBadge();
+    Promise.resolve(r).catch(() => {});
+  } catch (e) { /* unsupported */ }
+}
+
+// ---- cycles: start -> next start; the latest cycle is open (length null)
+function cycles(days) {
+  const starts = periodStarts(days);
+  return starts.map((start, i) => {
+    let n = 1;
+    while (flowOf(days, addDays(start, n))) n++;
+    return { start, next: starts[i + 1] || null, length: starts[i + 1] ? diffDays(start, starts[i + 1]) : null, periodLen: n };
+  });
+}
+// trailing 3-day mean of whatever scores exist in the window (drawn as a line only; never shown as a number)
+const rolling = sc => sc.map((_, i) => { const w = sc.slice(Math.max(0, i - 2), i + 1).filter(x => x != null); return w.length ? w.reduce((a, b) => a + b) / w.length : null; });
+const W = 340, X0 = 18; // strip geometry: mood axis 1-10 on top (y 6..66), flow bars below (y 72..96)
+const moodY = v => 6 + (10 - v) * 60 / 9;
+const line = (pts, attrs) => pts.length > 1 ? `<polyline points="${pts.join(' ')}" fill="none" ${attrs}/>` : '';
+const axis = `<text x="0" y="${moodY(10) + 3}" font-size="8" fill="#7a7266">10</text><text x="4" y="${moodY(1) + 3}" font-size="8" fill="#7a7266">1</text>`;
+function stripSVG(c, days, preds, today) {
+  const p = preds.find(q => q.forCycleStart === c.start);
+  const len = c.length || Math.max(diffDays(c.start, today) + 1, p ? diffDays(c.start, p.windowEnd) + 1 : 1);
+  const dx = (W - X0) / len, x = i => X0 + i * dx + dx / 2, ds = [...Array(len)].map((_, i) => days[addDays(c.start, i)] || {});
+  const avg = rolling(ds.map(e => e.moodScore ?? null));
+  let h = `<svg class="strip" viewBox="0 0 ${W} 100">${axis}<line x1="${X0}" x2="${W}" y1="69" y2="69" stroke="#e4dccb"/>`;
+  if (p) h += `<rect x="${X0 + diffDays(c.start, p.windowStart) * dx}" y="0" width="${(diffDays(p.windowStart, p.windowEnd) + 1) * dx}" height="100" fill="rgba(0,0,0,.07)"/>`;
+  ds.forEach((e, i) => {
+    if (e.flow) h += `<rect x="${x(i) - dx * .4}" y="${96 - e.flow * 6}" width="${dx * .8}" height="${e.flow * 6}" fill="var(--f${e.flow})"/>`;
+    if (e.moodScore) h += `<circle cx="${x(i)}" cy="${moodY(e.moodScore)}" r="2.2" fill="#1b1b1b"/>`;
+  });
+  return h + line(avg.flatMap((v, i) => v == null ? [] : [`${x(i)},${moodY(v)}`]), 'stroke="#1b1b1b" stroke-width="1.2" opacity=".6"') + '</svg>';
+}
+// Compare: completed cycles' mood lines aligned so x=0 is the next start (days before next period)
+function compareSVG(cs, days) {
+  const done = cs.filter(c => c.length), max = Math.max(...done.map(c => c.length)), dx = (W - X0) / max;
+  return `<svg class="strip" viewBox="0 0 ${W} 72">${axis}` + done.map((c, k) => {
+    const avg = rolling([...Array(c.length)].map((_, i) => (days[addDays(c.start, i)] || {}).moodScore ?? null));
+    return line(avg.flatMap((v, i) => v == null ? [] : [`${X0 + (max - c.length + i + .5) * dx},${moodY(v)}`]), `stroke="#1b1b1b" stroke-width="1.2" opacity="${(.25 + .75 * (k + 1) / done.length).toFixed(2)}"`);
+  }).join('') + `<text x="${W}" y="70" font-size="8" fill="#7a7266" text-anchor="end">next start</text></svg>`;
+}
+function cyclesHTML(st, today, sel, compare) {
+  const cs = cycles(st.days), p = currentPrediction(st);
+  let h = `<h2>Cycles</h2><p>${p ? `Next period expected between ${fmt(p.windowStart)} and ${fmt(p.windowEnd)} (median ${p.medianUsed} days, last ${p.cyclesUsed} cycles)` : 'Still learning — log one more period start'}</p>`;
+  if (!cs.length) return h;
+  const c = cs[sel = Math.min(sel ?? cs.length - 1, cs.length - 1)];
+  h += `<div class="strip-head"><button data-cyc="${sel - 1}"${sel ? '' : ' disabled'} aria-label="Earlier cycle">‹</button><b>${fmt(c.start)}${c.next ? ' – ' + fmt(addDays(c.next, -1)) : ' – now'}</b><button data-cyc="${sel + 1}"${sel < cs.length - 1 ? '' : ' disabled'} aria-label="Later cycle">›</button></div>${stripSVG(c, st.days, st.predictions, today)}`;
+  if (cs.filter(x => x.length).length > 1) h += `<button class="chip${compare ? ' on' : ''}" data-compare>Compare cycles</button>${compare ? compareSVG(cs, st.days) : ''}`;
+  return h + `<table class="clist"><tr><th>Start</th><th>Length</th><th>Period</th></tr>${cs.map((x, i) => `<tr data-cyc="${i}"${i === sel ? ' class="on"' : ''}><td>${fmt(x.start, { month: 'short', day: 'numeric', year: 'numeric' })}</td><td>${x.length ? nDays(x.length) : 'current'}</td><td>${nDays(x.periodLen)}</td></tr>`).reverse().join('')}</table>`;
+}
+
+// ---- filter: one tag at a time plus a case-insensitive substring search over tag labels and notes
+const ALL = Object.values(TAGS).flat();
+const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const tagsOf = e => Object.keys(TAGS).flatMap(f => e[f]);
+const labelsLike = q => ALL.filter(t => t.toLowerCase().includes(q.toLowerCase()));
+function matchDays(days, tag, q) {
+  q = q.trim().toLowerCase();
+  if (!tag && !q) return [];
+  return Object.keys(days).filter(d => {
+    const e = days[d], tags = tagsOf(e);
+    return (!tag || tags.includes(tag)) && (!q || e.note.toLowerCase().includes(q) || tags.some(t => t.toLowerCase().includes(q)));
+  }).sort().reverse();
+}
+function filterHTML(st, f, today) {
+  const q = f.q.trim(), m = matchDays(st.days, f.tag, q), like = labelsLike(q), groups = [...GROUPS.map(g => [g[1], g[2]]), ['Premenopause', TAGS.perimeno]];
+  let h = groups.map(([head, items]) => {
+    const vis = items.filter(t => like.includes(t));
+    return vis.length ? `<div class="lbl">${head}</div><div class="row">${vis.map(t => `<button class="chip${f.tag === t ? ' on' : ''}" data-tag="${t}">${t}</button>`).join('')}</div>` : '';
+  }).join('');
+  if (f.tag || q) h += `<div class="row"><button class="seg" data-clear>Clear filter</button></div>`;
+  if (!f.tag && !q) return h + '<p>Tap a tag or type to see matching days.</p>';
+  h += `<div class="sum">${esc([f.tag, q && `“${q}”`].filter(Boolean).join(' + '))} — ${nDays(m.length)}</div>`;
+  h += calHTML(f.month, { days: st.days, today, match: new Set(m) });
+  let last = '';
+  for (const d of m) {
+    const e = st.days[d], mo = d.slice(0, 7);
+    if (mo !== last) { h += `<div class="mhead">${fmt(d, { month: 'long', year: 'numeric' })}</div>`; last = mo; }
+    const info = [e.flow ? 'Flow ' + FLOWS[e.flow].toLowerCase() : '', e.moodScore ? 'Mood ' + e.moodScore : '', ...tagsOf(e), e.note ? `“${e.note}”` : ''].filter(Boolean);
+    h += `<button class="res" data-date="${d}"><b>${fmt(d, { weekday: 'short', month: 'short', day: 'numeric' })}</b><small>${esc(info.join(' · '))}</small></button>`;
+  }
+  return h;
+}
+// Jump from the Filter screen to a day's Focus panel; Back returns with the filter untouched.
+const jump = (u, d) => Object.assign(u, { view: 'cal', selected: d, month: d.slice(0, 7), back: true });
+
+// ---- backup: validate the whole file before anything is written (same rule as game save codes)
+const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
+const isDate = d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && iso(D(d)) === d;
+function validateStore(o) {
+  if (!isObj(o) || o.version !== 1) return 'This is not a Heads-Up Honey v1 backup.';
+  if (!isObj(o.days) || !isObj(o.settings) || !Array.isArray(o.predictions)) return 'The backup is missing days, settings or predictions.';
+  for (const [d, e] of Object.entries(o.days)) {
+    if (!isDate(d) || !isObj(e) || ![0, 1, 2, 3, 4].includes(e.flow) || typeof e.note !== 'string' || !['tap', 'voice'].includes(e.source)
+      || !(e.moodScore === null || (Number.isInteger(e.moodScore) && e.moodScore >= 1 && e.moodScore <= 10))
+      || Object.keys(TAGS).some(f => !Array.isArray(e[f]) || e[f].some(t => !TAGS[f].includes(t)))) return 'The entry for ' + d + ' is not valid.';
+  }
+  const st = o.settings;
+  if (!['off', 'window', 'daily'].includes(st.moodCheckMode) || !(st.moodCheckPausedUntil === null || isDate(st.moodCheckPausedUntil))) return 'The settings are not valid.';
+  if (o.predictions.some(p => !isObj(p) || !['madeOn', 'forCycleStart', 'windowStart', 'windowEnd'].every(k => isDate(p[k])) || ![p.medianUsed, p.cyclesUsed].every(Number.isInteger))) return 'The prediction log is not valid.';
+  return '';
+}
+function parseImport(text) {
+  let o;
+  try { o = JSON.parse(text); } catch (e) { return { error: 'The file is not valid JSON.' }; }
+  const error = validateStore(o);
+  return error ? { error } : { data: o };
+}
+const CSV_COLS = ['flow', 'moodScore', ...Object.keys(TAGS), 'note', 'source'];
+const csvCell = v => `"${String(v).replace(/"/g, '""')}"`;
+const toCSV = days => ['date,' + CSV_COLS.join(','), ...Object.keys(days).sort().map(d => {
+  const e = days[d];
+  return [d, ...CSV_COLS.map(c => c === 'flow' ? FLOWS[e.flow] : Array.isArray(e[c]) ? e[c].join('; ') : e[c] ?? '')].map(csvCell).join(',');
+})].join('\r\n');
+const hasData = st => Object.keys(st.days).length > 0 || st.predictions.length > 0;
+// Evening check-in banner (in-app only; no push). Window mode: from 7 days before the window through day 3 of the bleed.
+function checkinDue(st, today, hour) {
+  const s = st.settings, last = periodStarts(st.days).at(-1), p = currentPrediction(st);
+  if (s.moodCheckMode === 'off' || hour < 19 || (s.moodCheckPausedUntil && today < s.moodCheckPausedUntil) || (st.days[today] || {}).moodScore != null) return false;
+  if (s.moodCheckMode === 'daily') return true;
+  return !!(last && last <= today && diffDays(last, today) <= 2) || !!(p && today >= addDays(p.windowStart, -7));
+}
+const pause = (st, today) => { st.settings.moodCheckPausedUntil = addDays(today, 7); };
+function settingsHTML(st, u, today) {
+  const m = st.settings.moodCheckMode, pu = st.settings.moodCheckPausedUntil;
+  const imp = u.pendingImport, rs = ['Reset this app’s data', 'Erase all Heads-Up Honey data?', 'Really erase? This cannot be undone.'][u.resetStep];
+  return `<h2>Settings</h2>
+<div class="set"><div class="lbl">Evening mood check-in</div>
+<div class="row">${['off', 'window', 'daily'].map(x => `<button class="seg${m === x ? ' on' : ''}" data-mode="${x}">${{ off: 'Off', window: 'Window', daily: 'Daily' }[x]}</button>`).join('')}</div>
+<div class="row">${pu && pu > today ? `<p>Paused until ${fmt(pu)}</p><button class="chip" data-resume>Resume</button>` : '<button class="chip" data-pause>Pause mood check-ins 7 days</button>'}</div></div>
+<div class="set"><div class="lbl">Backup</div>
+<div class="row"><button class="seg" data-export="json">Export JSON</button><button class="seg" data-export="csv">Export CSV</button><label class="seg">Import JSON<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
+${imp ? `<p class="warn">Replace everything on this phone with the file (${nDays(Object.keys(imp.days).length)})?</p><div class="row"><button class="seg" data-import-ok>Replace current data</button><button class="seg" data-import-cancel>Cancel</button></div>` : ''}
+<p>Data lives only on this phone. Export now and then to keep a backup.</p></div>
+<div class="set"><div class="lbl">Reset</div>
+<div class="row"><button class="seg${u.resetStep ? ' warn' : ''}" data-reset>${rs}</button>${u.resetStep ? '<button class="seg" data-reset-cancel>Cancel</button>' : ''}</div></div>
+${u.msg ? `<p>${esc(u.msg)}</p>` : ''}`;
+}
+
+const summary = e => {
+  const p = [];
+  if (e.flow) p.push('flow ' + FLOWS[e.flow].toLowerCase());
+  if (e.moodScore != null) p.push('mood ' + e.moodScore);
+  Object.keys(TAGS).forEach(f => p.push(...e[f]));
+  if (e.note) p.push('note');
+  return p.length ? 'Logged: ' + p.join(', ') : 'Nothing logged';
+};
+
+const chips = (f, items, e) => items.map(t => `<button class="chip${e[f].includes(t) ? ' on' : ''}" data-field="${f}" data-val="${t}">${t}</button>`).join('');
+function panelHTML(d, days, periOpen) {
+  const e = { ...blankEntry(), ...days[d] };
+  const pb = (w, on, dis, t) => `<button class="seg${on ? ' on' : ''}" data-period="${w}"${dis ? ' disabled' : ''}>${t}</button>`;
+  return `<div class="ph"><b>${fmt(d, { weekday: 'short', month: 'short', day: 'numeric' })}</b></div>
+<div class="logged" id="logged">${summary(e)}</div>
+<div class="row">${pb('start', isStart(days, d), flowOf(days, addDays(d, -1)), 'Period started')}${pb('end', isEnd(days, d), flowOf(days, addDays(d, 1)), 'Period ended')}</div>
+<div class="row">${FLOWS.map((t, i) => `<button class="seg${e.flow === i ? ' on' : ''}" data-flow="${i}">${t}</button>`).join('')}</div>
+<div class="lbl">Mood</div>
+<div class="mood" id="mood">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => `<button data-mood="${i}"${e.moodScore === i ? ' class="on"' : ''} aria-label="Mood ${i}"><span>${i}</span></button>`).join('')}</div>
+${GROUPS.map(([f, h, items]) => `<div class="lbl">${h}</div><div class="row">${chips(f, items, e)}</div>`).join('')}
+<div class="peri-h"><span class="lbl">Premenopause${e.perimeno.length ? ` (${e.perimeno.length})` : ''}</span><button data-peri>${periOpen ? 'Hide symptoms ▾' : 'Show symptoms ▸'}</button></div>
+${periOpen ? `<div class="row">${PERI.map(([h, items]) => `<div class="sub">${h}</div>${chips('perimeno', items, e)}`).join('')}</div>` : ''}
+<input id="note" placeholder="Note" value="${esc(e.note)}">`;
+}
+
+// ---- app (DOM only below this line)
+let store, readOnly = false;
+const ui = { view: 'cal', back: false, selected: null, month: null, periOpen: false, cyc: null, compare: false };
+const sui = { pendingImport: null, resetStep: 0, msg: '' };
+const filt = { tag: null, q: '', month: null };
+const $ = id => document.getElementById(id);
+
+function load() {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return blankStore();
+  try { return migrate(JSON.parse(raw)); }
+  catch (e) { readOnly = true; alert('Saved data could not be read, so nothing will be saved over it. ' + e.message); return blankStore(); }
+}
+function save() { if (!readOnly) localStorage.setItem(KEY, JSON.stringify(store)); }
+
+// Every tap goes through here: mutate the selected day, drop it if empty, save instantly.
+function edit(fn) {
+  const d = ui.selected, e = store.days[d] = { ...blankEntry(), ...store.days[d] };
+  fn(e); e.source = 'tap';
+  if (isEmpty(e)) delete store.days[d];
+  freezePrediction(store, todayISO());
+  save();
+}
+// ponytail: "dismissed today" lives in sessionStorage (not the locked data shape); a cold app relaunch may show it once more
+const dismissedOn = () => { try { return sessionStorage.getItem('heads-up-honey-checkin-dismissed'); } catch (e) { return null; } };
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function render() {
+  const h = status(store, todayISO());
+  $('hdr').innerHTML = `${bombSVG(h)}<div><b>${h.line1}</b><small>${h.line2}</small></div>`;
+  badge(h);
+  $('banner').hidden = dismissedOn() === todayISO() || !checkinDue(store, todayISO(), new Date().getHours());
+  $('v-cycles').innerHTML = cyclesHTML(store, todayISO(), ui.cyc, ui.compare);
+  $('v-settings').innerHTML = settingsHTML(store, sui, todayISO());
+  $('f-body').innerHTML = filterHTML(store, filt, todayISO());
+  for (const v of ['cal', 'filter', 'cycles', 'settings']) $('v-' + v).hidden = ui.view !== v;
+  $('back').hidden = !ui.back;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.view === ui.view));
+  $('cal').innerHTML = calHTML(ui.month, { days: store.days, selected: ui.selected, today: todayISO(), win: currentPrediction(store) });
+  $('panel').innerHTML = panelHTML(ui.selected, store.days, ui.periOpen);
+}
+
+function init() {
+  store = load();
+  ui.selected = todayISO(); ui.month = filt.month = ui.selected.slice(0, 7);
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('button,tr[data-cyc]'); if (!b) return;
+    const t = b.dataset, inFilter = !!b.closest('#v-filter');
+    if (t.view) { Object.assign(ui, { view: t.view, back: false }); Object.assign(sui, { pendingImport: null, resetStep: 0, msg: '' }); }
+    else if (t.month && inFilter) filt.month = shiftMonth(filt.month, +t.month);
+    else if (t.month) ui.month = shiftMonth(ui.month, +t.month);
+    else if (t.date && inFilter) jump(ui, t.date);
+    else if (t.date) ui.selected = t.date;
+    else if (t.tag) { filt.tag = filt.tag === t.tag ? null : t.tag; const m = matchDays(store.days, filt.tag, filt.q)[0]; if (m) filt.month = m.slice(0, 7); }
+    else if (t.mode) { store.settings.moodCheckMode = t.mode; save(); }
+    else if ('pause' in t) { pause(store, todayISO()); save(); }
+    else if ('resume' in t) { store.settings.moodCheckPausedUntil = null; save(); }
+    else if (t.export) download(`heads-up-honey-${todayISO()}.${t.export}`, t.export === 'json' ? JSON.stringify(store, null, 1) : toCSV(store.days), t.export === 'json' ? 'application/json' : 'text/csv');
+    else if ('importOk' in t) { store = sui.pendingImport; sui.pendingImport = null; readOnly = false; save(); sui.msg = 'Backup imported.'; }
+    else if ('importCancel' in t) sui.pendingImport = null;
+    else if ('reset' in t && sui.resetStep < 2) sui.resetStep++;
+    else if ('reset' in t) { localStorage.removeItem(KEY); store = blankStore(); readOnly = false; sui.resetStep = 0; sui.msg = 'Heads-Up Honey data erased.'; }
+    else if ('resetCancel' in t) sui.resetStep = 0;
+    else if ('checkin' in t) {
+      Object.assign(ui, { selected: todayISO(), month: todayISO().slice(0, 7) }); render();
+      const m = $('mood'); m.scrollIntoView({ block: 'center' }); m.classList.add('flash'); m.querySelector('button').focus();
+      return setTimeout(() => m.classList.remove('flash'), 1500);
+    }
+    else if ('dismiss' in t) { try { sessionStorage.setItem('heads-up-honey-checkin-dismissed', todayISO()); } catch (e) { /* private mode */ } }
+    else if ('week' in t) { pause(store, todayISO()); save(); }
+    else if ('clear' in t) { Object.assign(filt, { tag: null, q: '' }); $('q').value = ''; }
+    else if (t.period) { periodTap(store.days, ui.selected, t.period); edit(() => {}); }
+    else if (t.flow) edit(e => e.flow = +t.flow);
+    else if (t.mood) edit(e => e.moodScore = e.moodScore === +t.mood ? null : +t.mood);
+    else if (t.field) edit(e => e[t.field] = e[t.field].includes(t.val) ? e[t.field].filter(x => x !== t.val) : [...e[t.field], t.val]);
+    else if ('peri' in t) ui.periOpen = !ui.periOpen;
+    else if (t.cyc) ui.cyc = +t.cyc;
+    else if ('compare' in t) ui.compare = !ui.compare;
+    else return;
+    render();
+  });
+  document.addEventListener('change', async ev => {
+    if (ev.target.id !== 'imp' || !ev.target.files[0]) return;
+    const r = parseImport(await ev.target.files[0].text());
+    sui.msg = r.error || '';
+    if (r.data && (hasData(store) || readOnly)) sui.pendingImport = r.data; // second, explicit tap required before replacing
+    else if (r.data) { store = r.data; save(); sui.msg = 'Backup imported.'; }
+    render();
+  });
+  document.addEventListener('input', ev => {
+    if (ev.target.id === 'q') { filt.q = ev.target.value; return render(); }
+    if (ev.target.id !== 'note') return;
+    edit(e => e.note = ev.target.value);
+    $('logged').textContent = summary({ ...blankEntry(), ...store.days[ui.selected] });
+  });
+  render();
+}
+if (typeof document !== 'undefined') init();
+</script>
+</body>
+</html>
