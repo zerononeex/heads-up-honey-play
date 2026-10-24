@@ -194,24 +194,47 @@ test('filter: results list grouped by month (newest first), rows jump to the rig
   $('jump')(u, rows[1][0]);
   assert.deepEqual({ ...u }, { view: 'cal', selected: '2026-09-03', month: '2026-09', back: true });
 });
-test('calendar stack: 13 months in order around today, Today pill, no pager; scroll helper finds the month', () => {
+test('calendar stack: 37 months from today-12 to today+24 in order, Today pill, no pager; scroll helper finds the month', () => {
   const h = $('stackHTML')({ days: { '2026-08-12': { flow: 2 } }, selected: '2026-08-12', today: '2026-10-24' });
   const secs = h.split('<div class="mon">').slice(1);
-  assert.equal(secs.length, 13);
-  assert.deepEqual(secs.map(s => s.match(/<b>([^<]+)/)[1]), ['April 2026', 'May 2026', 'June 2026', 'July 2026', 'August 2026', 'September 2026',
-    'October 2026', 'November 2026', 'December 2026', 'January 2027', 'February 2027', 'March 2027', 'April 2027']);
-  assert.match(secs[6], /class="d today" data-date="2026-10-24"/); // same cell rendering in every month
-  assert.match(secs[4], /class="d f2 sel" data-date="2026-08-12"/);
+  assert.equal(secs.length, 37);
+  const names = secs.map(s => s.match(/<b>([^<]+)/)[1]);
+  assert.deepEqual(names.slice(0, 3), ['October 2025', 'November 2025', 'December 2025']);
+  assert.deepEqual(names.slice(10, 15), ['August 2026', 'September 2026', 'October 2026', 'November 2026', 'December 2026']);
+  assert.equal(names[36], 'October 2028');
+  assert.match(secs[12], /class="d today" data-date="2026-10-24"/); // same cell rendering in every month
+  assert.match(secs[10], /class="d f2 sel" data-date="2026-08-12"/);
   assert.doesNotMatch(h, /data-month|‹|›/, 'month headers are plain labels');
   const cal = html.slice(html.indexOf('<section id="v-cal">'), html.indexOf('<section id="v-filter"'));
   assert.match(cal, /<button id="today" data-today>Today<\/button>/);
   assert.doesNotMatch(cal, /data-month/);
   assert.match($('filterHTML')(tagged(), { tag: 'Headache', q: '', month: '2026-10' }, '2026-10-24'), /data-month="-1"[\s\S]*data-month="1"/, 'Filter keeps its pager');
-  const mi = d => $('monthIndex')(d, '2026-10-24');
-  assert.equal(mi('2026-10-24'), 6); assert.equal(mi('2026-04-30'), 0); assert.equal(mi('2027-01-01'), 9); assert.equal(mi('2027-04-15'), 12);
-  assert.equal(mi('2025-01-01'), 0); assert.equal(mi('2028-01-01'), 12); // outside the stack clamps to an end
-  assert.equal($('stackMonths')('2026-01-31')[0], '2025-07'); // year rollover
-  assert.equal($('STACK_RANGE'), 6);
+  const mi = d => $('monthIndex')(d, {}, '2026-10-24');
+  assert.equal(mi('2026-10-24'), 12); assert.equal(mi('2025-10-31'), 0); assert.equal(mi('2027-01-01'), 15); assert.equal(mi('2028-10-15'), 36);
+  assert.equal(mi('2024-01-01'), 0); assert.equal(mi('2029-01-01'), 36); // outside the stack clamps to an end
+  assert.equal($('stackMonths')({}, '2026-01-31')[0], '2025-01'); // year rollover
+});
+test('calendar window: anchored to today, stretched back to the first logged month, never cuts history', () => {
+  const today = '2026-10-24', win = days => $('stackMonths')(days, today), mi = (d, days) => $('monthIndex')(d, days, today);
+  const fixtures = {
+    empty: [{}, 37, '2025-10', null],
+    recent: [{ '2026-07-03': { flow: 2 }, '2026-09-01': { flow: 1 } }, 37, '2025-10', '2026-07-03'], // first log 3 months ago
+    old: [{ '2024-04-09': { flow: 3 }, '2026-10-01': { flow: 1 } }, 55, '2024-04', '2024-04-09'], // first log 30 months ago
+  };
+  for (const [name, [days, count, start, first]] of Object.entries(fixtures)) {
+    const m = win(days);
+    assert.equal(m.length, count, name + ' count'); assert.equal(m[0], start, name + ' start'); assert.equal(m.at(-1), '2028-10', name + ' end = today+24');
+    assert.equal(m.length, $('monthsBetween')(m[0], m.at(-1)) + 1, name + ' count is derived');
+    assert.equal(m[mi(today, days)], '2026-10', name + ' monthIndex(today) lands on this month');
+    if (first) assert.equal(m[mi(first, days)], first.slice(0, 7), name + ' first log is inside the stack');
+    const secs = $('stackHTML')({ days, selected: today, today }).split('<div class="mon">').slice(1);
+    assert.equal(secs.length, count); assert.match(secs[mi(today, days)], /class="d today[^"]*" data-date="2026-10-24"/);
+  }
+  assert.equal(mi('2024-04-09', fixtures.old[0]), 0);
+  // Today pill, on-open position and the Filter jump all scroll through monthIndex over the same window
+  assert.match(html, /const scrollToMonth = \(d, smooth\) => \$\('cal'\)\.scrollTo\(\{ top: \$\('cal'\)\.children\[monthIndex\(d, store\.days, todayISO\(\)\)\]/);
+  assert.match(html, /const stackHTML = o => stackMonths\(o\.days, o\.today\)/);
+  assert.match(html, /'today' in t\) \{[^}]*scrollToMonth\(todayISO\(\), true\)/);
 });
 test('import: validates the whole file before anything is written', () => {
   const imp = t => $('parseImport')(t);
@@ -375,5 +398,9 @@ test('top underlay: solid skin colour holds the top safe area on a non-scrolling
   assert.match(rule('nav'), /background:var\(--bg\)/); assert.match(rule('nav'), /padding-bottom:env\(safe-area-inset-bottom\)/);
   for (const sk of html.match(/--bg:[^;]+/g)) assert.match(sk, /^--bg:#[0-9A-F]{6}$/i, 'skin backgrounds are fully opaque');
   assert.match(html, /<meta name="apple-mobile-web-app-status-bar-style" content="default">/);
+});
+test('no accidental zoom: viewport locks scale, base CSS kills double-tap zoom', () => {
+  assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">/);
+  assert.match(html, /\nhtml,body\{[^}]*touch-action:manipulation/);
 });
 console.log(`\n${n} checks passed`);

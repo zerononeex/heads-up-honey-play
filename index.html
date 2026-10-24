@@ -5,7 +5,7 @@
 <title>Heads-Up Honey</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -23,7 +23,7 @@
 *{box-sizing:border-box;margin:0}
 [hidden]{display:none!important}
 /* ponytail: no document-level bounce, so nothing (header included) can be dragged up under the status bar; only the inner regions scroll */
-html,body{height:100%;overscroll-behavior:none}
+html,body{height:100%;overscroll-behavior:none;touch-action:manipulation}
 body{background:var(--bg);color:var(--ink);font:14px/1.3 -apple-system,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 #app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:0 8px}
@@ -199,12 +199,17 @@ function calHTML(ym, o) {
   const b = `<b>${fmt(first, { month: 'long', year: 'numeric' })}</b>`;
   return `<div class="cal-head">${o.pager ? `<button data-month="-1" aria-label="Previous month">‹</button>${b}<button data-month="1" aria-label="Next month">›</button>` : b}</div><div class="cal">${h}</div>`;
 }
-// Calendar screen: a vertical stack of months around today, all in the DOM at once (13 small grids, no lazy loading).
-const STACK_RANGE = 6; // ponytail: fixed 6 months back to 6 ahead; widen this constant if older days need to be on screen
-const stackMonths = today => [...Array(2 * STACK_RANGE + 1)].map((_, i) => iso(Date.UTC(+today.slice(0, 4), today.slice(5, 7) - 1 - STACK_RANGE + i, 1)).slice(0, 7));
+// Calendar screen: a vertical stack of months, all in the DOM at once (small grids, no lazy loading).
+// Window = 12 months back (or the first logged month, if earlier) through 24 ahead, so history is never cut off.
+const monthsBetween = (a, b) => (b.slice(0, 4) - a.slice(0, 4)) * 12 + (b.slice(5, 7) - a.slice(5, 7));
+const ymAt = (ym, n) => iso(Date.UTC(+ym.slice(0, 4), ym.slice(5, 7) - 1 + n, 1)).slice(0, 7);
+function stackMonths(days, today) {
+  const back = ymAt(today, -12), first = Object.keys(days).sort()[0], start = first && first < back ? first.slice(0, 7) : back;
+  return [...Array(monthsBetween(start, today) + 25)].map((_, i) => ymAt(start, i));
+}
 // ponytail: a date outside the stack clamps to its first/last month (its day panel still opens)
-const monthIndex = (d, today) => Math.max(0, Math.min(2 * STACK_RANGE, (d.slice(0, 4) - today.slice(0, 4)) * 12 + (d.slice(5, 7) - today.slice(5, 7)) + STACK_RANGE));
-const stackHTML = o => stackMonths(o.today).map(ym => `<div class="mon">${calHTML(ym, o)}</div>`).join('');
+const monthIndex = (d, days, today) => { const m = stackMonths(days, today); return Math.max(0, Math.min(m.length - 1, monthsBetween(m[0], d))); };
+const stackHTML = o => stackMonths(o.days, o.today).map(ym => `<div class="mon">${calHTML(ym, o)}</div>`).join('');
 const shiftMonth = (ym, n) => addDays(ym + '-15', n * 30.5 | 0).slice(0, 7); // ponytail: mid-month + ~30.5d always lands in the adjacent month
 
 // ---- period days: a start is flow>=1 with no flow the day before; an end is flow>=1 with none the day after
@@ -495,7 +500,7 @@ function download(name, text, type) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 // Scrolls the month stack so the date's month sits at the top (Today pill, opening the screen, the Filter jump).
-const scrollToMonth = (d, smooth) => $('cal').scrollTo({ top: $('cal').children[monthIndex(d, todayISO())].offsetTop, behavior: smooth ? 'smooth' : 'auto' });
+const scrollToMonth = (d, smooth) => $('cal').scrollTo({ top: $('cal').children[monthIndex(d, store.days, todayISO())].offsetTop, behavior: smooth ? 'smooth' : 'auto' });
 function render() {
   const h = status(store, todayISO());
   const lvl = potLevel(store, todayISO()), img = $('potImg'), src = potView(lvl);
