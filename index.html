@@ -16,10 +16,10 @@
    --f1..4 flow shading (deepens with flow), --match filter ring, --hatch predicted-window stripes. */
 :root{color-scheme:dark;--bg:#221A14;--ink:#FFF7E6;--mute:#CBB79E;--line:#4A3A2D;--chip:#2E231B;--on:#F59E0B;--onink:#221A14;
   --f1:#4E2534;--f2:#6C2A40;--f3:#8B2E4A;--f4:#B03A60;--onflow:#FFF7E6;--match:#F59E0B;--matchbg:#4A3418;
-  --hatch:rgba(255,247,230,.22);--warn:#F2A0B0;--pot:#D9A066;--wood:#C08A55}
+  --hatch:rgba(255,247,230,.22);--warn:#F2A0B0}
 :root[data-skin="cream"]{color-scheme:light;--bg:#FFF7E6;--ink:#3B2A1A;--mute:#8A7258;--line:#EADBC0;--chip:#FFFDF8;--on:#D97706;--onink:#FFFDF8;
   --f1:#F6D3DD;--f2:#E8A0B4;--f3:#D97A95;--f4:#C14A6E;--onflow:#fff;--match:#D97706;--matchbg:#FDE7C2;
-  --hatch:rgba(59,42,26,.18);--warn:#A33;--pot:#8A5A2B;--wood:#B07A45}
+  --hatch:rgba(59,42,26,.18);--warn:#A33}
 *{box-sizing:border-box;margin:0}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -28,7 +28,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 6px) 8px 0}
 header{display:flex;align-items:center;gap:10px;min-height:52px}
 header b{display:block;font-size:17px}
-header svg{flex:none}
+/* fixed square box: swapping the pot image never shifts the header */
+.pot{position:relative;flex:none;width:56px;height:56px}
+.pot img,.pot .honey{display:block;width:100%;height:100%;border-radius:12px}
+/* pot motion: used only by the motion script below */
+.pot .honey{position:absolute;inset:0;pointer-events:none}
+.pot .honey g{transition:transform .7s cubic-bezier(.3,1.9,.5,1)}
+.pot img.pour{animation:pour .18s ease-in-out 8 alternate}
+@keyframes pour{from{transform:scale(1.06) rotate(-4deg)}to{transform:scale(1.06) rotate(4deg)}}
+.pot .bee{position:absolute;left:0;top:0;width:14px;height:14px;pointer-events:none;animation:fly 2.5s ease-in-out forwards}
+@keyframes fly{0%{transform:translate(-18px,34px);opacity:0}12%{opacity:1}30%{transform:translate(8px,-10px)}55%{transform:translate(50px,-6px) scaleX(-1)}
+  75%{transform:translate(62px,30px) scaleX(-1)}90%{opacity:1}100%{transform:translate(20px,58px);opacity:0}}
 header small{color:var(--mute);font-size:12px}
 #v-cal{flex:1;min-height:0;display:flex;flex-direction:column}
 #panel{flex:1;min-height:0;overflow-y:auto;border-top:1px solid var(--line);margin-top:4px;padding:6px 0 12px}
@@ -47,7 +57,13 @@ button:disabled{opacity:.4}
 .mood button{flex:1;height:42px;display:flex;align-items:center;justify-content:center}
 .mood span{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:12px}
 .mood .on span{background:var(--on);color:var(--onink)}
-.peri-h{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.peri-h{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+/* timeline: one thin line down the left, a hollow node per stop (accent-filled once that stop has anything logged) */
+.tl{position:relative;padding-left:18px}
+.tl::before{content:'';position:absolute;left:4.25px;top:10px;bottom:14px;width:1.5px;background:var(--mute);opacity:.5}
+.stop{position:relative}
+.stop::before{content:'';position:absolute;left:-18px;top:7px;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--mute);background:var(--bg)}
+.stop.on::before{background:var(--on);border-color:var(--on)}
 .peri-h button{font-size:13px;color:var(--mute);padding:6px 0}
 .sub{font-size:11px;color:var(--mute);width:100%;margin-top:2px}
 .view{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px}
@@ -77,7 +93,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 #banner [data-checkin]{flex:1;text-align:left}
 #banner .x{color:var(--mute);font-size:12px;white-space:nowrap}
 .mood.flash{outline:2px solid var(--ink);border-radius:8px}
-#note{width:100%;margin-top:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--chip);color:inherit;font:inherit}
+#note{width:100%;margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--chip);color:inherit;font:inherit}
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin:2px 0}
 .cal-head b{font-size:14px}
 .cal-head button{width:36px;height:30px;font-size:18px}
@@ -96,7 +112,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 <main id="app">
   <section id="v-cal">
     <button class="back" id="back" data-view="filter" hidden>‹ Back to filter</button>
-    <header id="hdr"></header>
+    <header id="hdr"><div class="pot" id="pot"><img id="potImg" width="56" height="56" alt=""></div><div id="hdrText"></div></header>
     <div id="banner" hidden><button data-checkin>Evening check-in — if it comes up naturally, grab a mood out of 10.</button><button class="x" data-week>Don’t ask this week</button><button class="x" data-dismiss aria-label="Dismiss">✕</button></div>
     <div id="cal"></div>
     <div id="panel"></div>
@@ -223,18 +239,17 @@ function status(st, today) {
   return today <= p.windowEnd ? { state: 'window', days: du, line1: 'In the window', line2 } : { state: 'past', days: du, line1: 'Window passed', line2 };
 }
 
-// Honey pot: the countdown visual. Level from the same status() state: far/learning/period = empty outline,
-// approaching = bottom third, close = two-thirds + dipper, window/past = full + drip + dipper.
-const POT = 'M21 19C21 23 9 27 9 41C9 53 19 59 32 59C45 59 55 53 55 41C55 27 43 23 43 19Z';
-function potSVG(h) {
-  const st = h.state, lvl = { approaching: 1 / 3, close: 2 / 3, window: 1, past: 1 }[st] || 0, y = 59 - 40 * lvl;
-  return `<svg data-state="${st}" data-level="${lvl.toFixed(2)}" width="48" height="48" viewBox="0 0 64 64" aria-hidden="true">
-<clipPath id="pf"><path d="${POT}"/></clipPath>
-${lvl ? `<g clip-path="url(#pf)"><rect y="${y}" width="64" height="${40 * lvl}" fill="#F59E0B"/><rect y="${y}" width="64" height="2.5" fill="#D97706"/></g>` : ''}
-<g fill="none" stroke-width="2.4"><path d="${POT}" stroke="var(--pot)" stroke-linejoin="round"/><rect x="17" y="14" width="30" height="5" rx="2.5" stroke="var(--pot)"/>
-${lvl > .5 ? '<g class="dipper" stroke="var(--wood)" stroke-linecap="round"><path d="M12 15L48 5"/><g transform="rotate(-15 52 5)"><rect x="47" y="1" width="11" height="8" rx="3.5"/><path d="M50.5 2.5v6M54 1.6v6"/></g></g>' : ''}</g>
-${lvl === 1 ? '<g class="drip" fill="#F59E0B"><path d="M17.5 17.5C16 22 8 24 6.5 31" fill="none" stroke="#F59E0B" stroke-width="2.6" stroke-linecap="round"/><circle cx="6.3" cy="33" r="2.6"/></g>' : ''}</svg>`;
+// Header pot: 17 finished images, one shown at a time. 0 = no start logged; 1-15 = ceil(cycle day / 2), held at 15;
+// 16 = overflow from the predicted window's first day until a new start is logged. Still learning = never 16.
+function potLevel(st, today) {
+  const last = periodStarts(st.days).filter(d => d <= today).at(-1), p = currentPrediction(st);
+  if (!last) return 0;
+  if (p && p.forCycleStart === last && today >= p.windowStart) return 16;
+  return Math.min(15, Math.ceil((diffDays(last, today) + 1) / 2));
 }
+const potFile = l => `assets/pots/pot-${String(l).padStart(2, '0')}.webp`;
+const potAlt = l => l === 0 ? 'Empty honey pot' : l === 16 ? 'Overflowing honey pot' : `Honey pot, level ${l} of 15`;
+let potView = potFile; // the motion script swaps this to show a honey-free base under its sloshing layer
 // Home Screen badge = days until the window (1-9). Silently no-ops where unsupported.
 // ponytail: inside the window the badge is a plain dot (setAppBadge() with no count) until a start is logged or the window passes
 function badge(h) {
@@ -370,12 +385,15 @@ function icsFor(p, today) {
     `DTSTART;VALUE=DATE:${d(p.windowStart)}`, `DTEND;VALUE=DATE:${d(addDays(p.windowEnd, 1))}`, 'SUMMARY:🍯', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
 }
 const pause = (st, today) => { st.settings.moodCheckPausedUntil = addDays(today, 7); };
-function settingsHTML(st, u, today, skin) {
+function settingsHTML(st, u, today, skin, motion) {
   const m = st.settings.moodCheckMode, pu = st.settings.moodCheckPausedUntil, p = currentPrediction(st);
   const imp = u.pendingImport, rs = ['Reset this app’s data', 'Erase all Heads-Up Honey data?', 'Really erase? This cannot be undone.'][u.resetStep];
   return `<h2>Settings</h2>
 <div class="set"><div class="lbl">Skin</div>
 <div class="row">${Object.entries(SKINS).map(([k, [t]]) => `<button class="seg${skin === k ? ' on' : ''}" data-skin="${k}">${t}</button>`).join('')}</div></div>
+<div class="set"><div class="lbl">Pot motion</div>
+<div class="row">${['Off', 'On'].map((t, i) => `<button class="seg${motion === !!i ? ' on' : ''}" data-motion="${i}">${t}</button>`).join('')}</div>
+<p>The honey sloshes as you tilt the phone. Turning it on asks for motion access.</p></div>
 <div class="set"><div class="lbl">Evening mood check-in</div>
 <div class="row">${['off', 'window', 'daily'].map(x => `<button class="seg${m === x ? ' on' : ''}" data-mode="${x}">${{ off: 'Off', window: 'Window', daily: 'Daily' }[x]}</button>`).join('')}</div>
 <div class="row">${pu && pu > today ? `<p>Paused until ${fmt(pu)}</p><button class="chip" data-resume>Resume</button>` : '<button class="chip" data-pause>Pause mood check-ins 7 days</button>'}</div></div>
@@ -401,19 +419,22 @@ const summary = e => {
 };
 
 const chips = (f, items, e) => items.map(t => `<button class="chip${e[f].includes(t) ? ' on' : ''}" data-field="${f}" data-val="${t}">${t}</button>`).join('');
+// Vertical timeline: the locked section order hangs off one line; a stop's node fills when that section has anything logged.
+const stop = (k, title, on, body) => `<div class="stop${on ? ' on' : ''}" data-stop="${k}">${title}${body}</div>`;
 function panelHTML(d, days, periOpen) {
   const e = { ...blankEntry(), ...days[d] };
   const pb = (w, on, dis, t) => `<button class="seg${on ? ' on' : ''}" data-period="${w}"${dis ? ' disabled' : ''}>${t}</button>`;
   return `<div class="ph"><b>${fmt(d, { weekday: 'short', month: 'short', day: 'numeric' })}</b></div>
 <div class="logged" id="logged">${summary(e)}</div>
-<div class="row">${pb('start', isStart(days, d), flowOf(days, addDays(d, -1)), 'Period started')}${pb('end', isEnd(days, d), flowOf(days, addDays(d, 1)), 'Period ended')}</div>
-<div class="row">${FLOWS.map((t, i) => `<button class="seg${e.flow === i ? ' on' : ''}" data-flow="${i}">${t}</button>`).join('')}</div>
-<div class="lbl">Mood</div>
-<div class="mood" id="mood">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => `<button data-mood="${i}"${e.moodScore === i ? ' class="on"' : ''} aria-label="Mood ${i}"><span>${i}</span></button>`).join('')}</div>
-${GROUPS.map(([f, h, items]) => `<div class="lbl">${h}</div><div class="row">${chips(f, items, e)}</div>`).join('')}
-<div class="peri-h"><span class="lbl">Premenopause${e.perimeno.length ? ` (${e.perimeno.length})` : ''}</span><button data-peri>${periOpen ? 'Hide symptoms ▾' : 'Show symptoms ▸'}</button></div>
-${periOpen ? `<div class="row">${PERI.map(([h, items]) => `<div class="sub">${h}</div>${chips('perimeno', items, e)}`).join('')}</div>` : ''}
-<input id="note" placeholder="Note" value="${esc(e.note)}">`;
+<div class="tl">
+${stop('period', '<div class="lbl">Period</div>', e.flow, `<div class="row">${pb('start', isStart(days, d), flowOf(days, addDays(d, -1)), 'Period started')}${pb('end', isEnd(days, d), flowOf(days, addDays(d, 1)), 'Period ended')}</div>
+<div class="row">${FLOWS.map((t, i) => `<button class="seg${e.flow === i ? ' on' : ''}" data-flow="${i}">${t}</button>`).join('')}</div>`)}
+${stop('mood', '<div class="lbl">Mood</div>', e.moodScore != null, `<div class="mood" id="mood">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => `<button data-mood="${i}"${e.moodScore === i ? ' class="on"' : ''} aria-label="Mood ${i}"><span>${i}</span></button>`).join('')}</div>`)}
+${GROUPS.map(([f, h, items]) => stop(f, `<div class="lbl">${h}</div>`, e[f].length, `<div class="row">${chips(f, items, e)}</div>`)).join('\n')}
+${stop('perimeno', `<div class="peri-h"><span class="lbl">Premenopause${e.perimeno.length ? ` (${e.perimeno.length})` : ''}</span><button data-peri>${periOpen ? 'Hide symptoms ▾' : 'Show symptoms ▸'}</button></div>`, e.perimeno.length,
+    periOpen ? `<div class="row">${PERI.map(([h, items]) => `<div class="sub">${h}</div>${chips('perimeno', items, e)}`).join('')}</div>` : '')}
+${stop('note', '<div class="lbl">Note</div>', e.note, `<input id="note" placeholder="Note" value="${esc(e.note)}">`)}
+</div>`;
 }
 
 // ---- app (DOM only below this line)
@@ -430,12 +451,14 @@ function load() {
   catch (e) { readOnly = true; alert('Saved data could not be read, so nothing will be saved over it. ' + e.message); return blankStore(); }
 }
 function save() { if (!readOnly) localStorage.setItem(KEY, JSON.stringify(store)); }
-// A missing or corrupt UI key falls back to Honey Midnight.
-const loadSkin = () => { try { return JSON.parse(localStorage.getItem(UI_KEY)).skin === 'cream' ? 'cream' : 'midnight'; } catch (e) { return 'midnight'; } };
+// A missing or corrupt UI key falls back to Honey Midnight with pot motion off; older keys without `motion` load as off.
+const loadUI = () => { try { const o = JSON.parse(localStorage.getItem(UI_KEY)); return { skin: o.skin === 'cream' ? 'cream' : 'midnight', motion: o.motion === true }; } catch (e) { return { skin: 'midnight', motion: false }; } };
+const loadSkin = () => loadUI().skin;
+const saveUI = patch => { try { localStorage.setItem(UI_KEY, JSON.stringify({ ...loadUI(), ...patch })); } catch (e) { /* private mode: lasts this session */ } };
 function setSkin(s, keep) {
   document.documentElement.dataset.skin = s;
   document.querySelector('meta[name="theme-color"]').content = SKINS[s][1];
-  if (keep) try { localStorage.setItem(UI_KEY, JSON.stringify({ skin: s })); } catch (e) { /* private mode: skin lasts this session */ }
+  if (keep) saveUI({ skin: s });
 }
 
 // Every tap goes through here: mutate the selected day, drop it if empty, save instantly.
@@ -456,11 +479,14 @@ function download(name, text, type) {
 }
 function render() {
   const h = status(store, todayISO());
-  $('hdr').innerHTML = `${potSVG(h)}<div><b>${h.line1}</b><small>${h.line2}</small></div>`;
+  const lvl = potLevel(store, todayISO()), img = $('potImg'), src = potView(lvl);
+  if (img.getAttribute('src') !== src) img.src = src; // plain swap; only the current state's file is ever fetched
+  img.alt = potAlt(lvl); img.dataset.level = lvl;
+  $('hdrText').innerHTML = `<b>${h.line1}</b><small>${h.line2}</small>`;
   badge(h);
   $('banner').hidden = dismissedOn() === todayISO() || !checkinDue(store, todayISO(), new Date().getHours());
   $('v-cycles').innerHTML = cyclesHTML(store, todayISO(), ui.cyc, ui.compare);
-  $('v-settings').innerHTML = settingsHTML(store, sui, todayISO(), document.documentElement.dataset.skin);
+  $('v-settings').innerHTML = settingsHTML(store, sui, todayISO(), document.documentElement.dataset.skin, loadUI().motion);
   $('f-body').innerHTML = filterHTML(store, filt, todayISO());
   for (const v of ['cal', 'filter', 'cycles', 'settings']) $('v-' + v).hidden = ui.view !== v;
   $('back').hidden = !ui.back;
@@ -483,6 +509,7 @@ function init() {
     else if (t.date) ui.selected = t.date;
     else if (t.tag) { filt.tag = filt.tag === t.tag ? null : t.tag; const m = matchDays(store.days, filt.tag, filt.q)[0]; if (m) filt.month = m.slice(0, 7); }
     else if (t.skin) setSkin(t.skin, true);
+    else if (t.motion) { saveUI({ motion: t.motion === '1' }); sui.msg = ''; } // the motion script asks for access from this same tap
     else if (t.mode) { store.settings.moodCheckMode = t.mode; save(); }
     else if ('pause' in t) { pause(store, todayISO()); save(); }
     else if ('resume' in t) { store.settings.moodCheckPausedUntil = null; save(); }
@@ -524,11 +551,73 @@ function init() {
     if (ev.target.id === 'q') { filt.q = ev.target.value; return render(); }
     if (ev.target.id !== 'note') return;
     edit(e => e.note = ev.target.value);
+    ev.target.closest('.stop').classList.toggle('on', !!ev.target.value);
     $('logged').textContent = summary({ ...blankEntry(), ...store.days[ui.selected] });
   });
   render();
 }
 if (typeof document !== 'undefined') init();
+</script>
+<script>
+// Pot motion: optional; deleting this whole script leaves the header pot working as a still image.
+// Nothing moves unless Settings > Pot motion is on, motion access was allowed, and the phone isn't set to reduce motion.
+// Slosh: levels 1-15 show the honey-free base plus a code-drawn honey layer clipped to the traced inside of the pot
+// (art handoff: 1600px space, surface Y = 1369 - level/15 * 574); the surface stays level as the phone tilts.
+(() => {
+  const IN = 'M509 729L489 754L468 779L449 804L435 829L424 854L415 879L409 904L404 929L401 954L401 979L402 1004L406 1029L410 1054L416 1079L425 1104L434 1129L445 1154L459 1179L474 1204L491 1229L513 1254L536 1279L565 1304L583 1329L637 1354L760 1369L836 1369L961 1354L1016 1329L1035 1304L1063 1279L1088 1254L1109 1229L1127 1204L1142 1179L1156 1154L1167 1129L1177 1104L1185 1079L1191 1054L1196 1029L1199 1004L1200 979L1199 954L1197 929L1192 904L1186 879L1177 854L1165 829L1151 804L1134 779L1113 754L1093 729Z';
+  const wall = [...IN.matchAll(/(\d+) (\d+)/g)].map(m => [+m[1], +m[2]]).filter(([x]) => x < 800); // left wall, for the streak
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)'), pot = $('pot'), img = $('potImg');
+  let allowed = !!window.DeviceOrientationEvent && !DeviceOrientationEvent.requestPermission, angle = 0, lastShake = 0;
+  const live = () => allowed && loadUI().motion && !reduce.matches;
+  const calShowing = () => !document.hidden && !$('v-cal').hidden;
+  pot.insertAdjacentHTML('beforeend', `<svg class="honey" viewBox="0 0 1600 1600" hidden aria-hidden="true"><clipPath id="potIn"><path d="${IN}"/></clipPath><g clip-path="url(#potIn)"><g id="honey"></g></g></svg>`);
+  const svg = pot.querySelector('.honey'), g = $('honey');
+  function draw(l) {
+    svg.toggleAttribute('hidden', !l);
+    if (!l) return;
+    const Y = 1369 - l / 15 * 574, wave = [];
+    for (let x = -600; x <= 2200; x += 20) wave.push(`${x} ${(Y + 13 * Math.sin(2 * Math.PI * (x - 470) / 280)).toFixed(1)}`);
+    const wx = wall.reduce((a, b) => Math.abs(b[1] - Y - 42) < Math.abs(a[1] - Y - 42) ? b : a)[0] + 70;
+    g.style.transformOrigin = `800px ${Y}px`;
+    g.innerHTML = `<path d="M${wave.join('L')}L2200 3400L-600 3400Z" fill="#F59B0A"/><path d="M${wave.join('L')}" fill="none" stroke="#592C0B" stroke-width="23"/>`
+      + (1369 - Y > 110 ? `<rect x="${wx}" y="${Y + 29}" width="${Math.min(170, 800 - wx)}" height="26" rx="13" fill="#F5AF3E"/>` : '');
+  }
+  const base = l => l < 5 ? potFile(0) : `assets/pots/base-${l < 10 ? '1bee' : '2bees'}.webp`; // bees match the baked states
+  potView = l => live() && l >= 1 && l <= 15 ? (draw(l), base(l)) : (draw(0), potFile(l));
+  // ponytail: left-right lean only (gamma, portrait); a phone tipped flat or landscape just reads as less tilt
+  addEventListener('deviceorientation', e => {
+    if (!live() || !calShowing() || e.gamma == null) return;
+    const a = Math.max(-25, Math.min(25, -e.gamma));
+    if (Math.abs(a - angle) < 1) return;
+    g.style.transform = `rotate(${angle = a}deg)`;
+  });
+  // Shake only matters when overflowing: a 1.5s "pouring harder" jiggle, at most once every 2.5s.
+  addEventListener('devicemotion', e => {
+    const a = e.acceleration || {}, m = Math.hypot(a.x || 0, a.y || 0, a.z || 0), now = Date.now();
+    if (m < 14 || now - lastShake < 2500 || !live() || !calShowing() || img.dataset.level !== '16') return;
+    lastShake = now; img.classList.add('pour'); setTimeout(() => img.classList.remove('pour'), 1500);
+  });
+  // Bee cameo: about every 10s one small bee loops past the pot, skipped when the art already has bees (levels 5-16).
+  setInterval(() => {
+    if (!live() || !calShowing() || +img.dataset.level >= 5) return;
+    pot.insertAdjacentHTML('beforeend', '<svg class="bee" viewBox="0 0 14 14" aria-hidden="true"><ellipse cx="5" cy="3.5" rx="2.6" ry="2" fill="#fff" opacity=".85"/><ellipse cx="7" cy="8" rx="5" ry="3.8" fill="#F5B528" stroke="#3B2A1A" stroke-width="1"/><path d="M6 4.5v7M8.6 4.6v6.8" stroke="#3B2A1A" stroke-width="1.3"/></svg>');
+    pot.lastChild.addEventListener('animationend', ev => ev.target.remove());
+  }, 10000);
+  // iOS only grants motion from a tap: the Settings "On" tap asks; a saved "On" re-asks on the first tap of a launch.
+  // A refusal turns the setting off, so the phone is never asked again unless the person taps On.
+  function ask() {
+    const req = [window.DeviceOrientationEvent, window.DeviceMotionEvent].filter(E => E && E.requestPermission).map(E => E.requestPermission());
+    Promise.all(req).then(r => r.every(x => x === 'granted'), () => false).then(ok => {
+      allowed = ok && !!window.DeviceOrientationEvent;
+      if (!allowed) { saveUI({ motion: false }); sui.msg = 'Motion access wasn’t allowed, so the pot stays still. To use it, allow motion in the phone’s settings, then turn Pot motion on again.'; }
+      render();
+    });
+  }
+  document.addEventListener('click', e => { if (e.target.closest('[data-motion="1"]')) ask(); });
+  if (loadUI().motion && !allowed && window.DeviceOrientationEvent) document.addEventListener('click', () => { if (loadUI().motion) ask(); }, { once: true });
+  reduce.addEventListener('change', render);
+  render();
+})();
 </script>
 </body>
 </html>
