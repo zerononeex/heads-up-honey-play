@@ -367,6 +367,26 @@ test('pot motion: UI-key default off, old keys load fine, round-trips beside the
   assert.equal($('potView'), $('potFile'), 'without the motion script the pot shows the still images');
   delete ctx.localStorage;
 });
+test('pot motion physics: honey keeps its volume, climbs to the lip sideways, never leans past 90°', () => {
+  // the geometry block of the motion script (IN .. lean), run on its own: it needs no DOM
+  const m = vm.createContext({});
+  vm.runInContext(html.match(/\n  const IN = [\s\S]*?\n  const lean = .*\n/)[0], m);
+  const [cut, surface, lean] = ['cut', 'surface', 'lean'].map(f => vm.runInContext(f, m));
+  for (let l = 1; l <= 15; l++) {
+    const Y = 1369 - l / 15 * 574, A = cut(0, 1, Y);
+    assert.ok(Math.abs(surface(0, A) - Y) < 0.5, `level ${l} rests at its still-image height`);
+    for (const deg of [-90, -45, 30, 90]) {
+      const r = deg * Math.PI / 180;
+      assert.ok(Math.abs(cut(Math.sin(r), Math.cos(r), surface(deg, A)) / A - 1) < 0.001, `level ${l} at ${deg}° keeps its area`);
+    }
+  }
+  // sideways, half-full honey stands against the low wall and reaches the rim (pot inside tops out at y 729-780)
+  const A8 = cut(0, 1, 1369 - 8 / 15 * 574), x = surface(90, A8);
+  assert.ok(x > 800 && x < 1000, 'half the pot pools on the right');
+  assert.equal(lean(30, 0), 30); assert.equal(lean(-90, 0), -90);
+  assert.equal(lean(170, 60), 90); assert.equal(lean(-170, 60), 90, 'upside down stays pinned on the side it was on');
+  assert.equal(lean(180, -20), -90); assert.equal(lean(-120, 0), -90);
+});
 test('.ics: one discreet all-day event over the predicted window; refused while still learning', () => {
   const st = storeWith(startsFrom('2026-01-01', [28, 28])); // frozen window Mar 25-27
   $('freezePrediction')(st, '2026-02-26');

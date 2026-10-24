@@ -37,7 +37,6 @@ header b{display:block;font-size:17px}
 .pot img,.pot .honey{display:block;width:100%;height:100%}
 /* pot motion: used only by the motion script below */
 .pot .honey{position:absolute;inset:0;pointer-events:none}
-.pot .honey g{transition:transform .7s cubic-bezier(.3,1.9,.5,1)}
 .pot img.pour{animation:pour .18s ease-in-out 8 alternate}
 @keyframes pour{from{transform:scale(1.06) rotate(-4deg)}to{transform:scale(1.06) rotate(4deg)}}
 .pot .bee{position:absolute;left:0;top:0;width:14px;height:14px;pointer-events:none;animation:fly 2.5s ease-in-out forwards}
@@ -587,34 +586,81 @@ if (typeof document !== 'undefined') init();
 // Pot motion: optional; deleting this whole script leaves the header pot working as a still image.
 // Nothing moves unless Settings > Pot motion is on, motion access was allowed, and the phone isn't set to reduce motion.
 // Slosh: levels 1-15 show the honey-free base plus a code-drawn honey layer clipped to the traced inside of the pot
-// (art handoff: 1600px space, surface Y = 1369 - level/15 * 574); the surface stays level as the phone tilts.
+// (art handoff: 1600px space, surface Y = 1369 - level/15 * 574). The surface stays level to real gravity, up to a
+// full sideways tilt where it climbs to the lip under the rim; past that it stays pinned there and one slow drip
+// stretches from the lip and pulls back. The clip is the pot's inside, so the honey can never pour out.
 (() => {
-  const IN = 'M509 729L489 754L468 779L449 804L435 829L424 854L415 879L409 904L404 929L401 954L401 979L402 1004L406 1029L410 1054L416 1079L425 1104L434 1129L445 1154L459 1179L474 1204L491 1229L513 1254L536 1279L565 1304L583 1329L637 1354L760 1369L836 1369L961 1354L1016 1329L1035 1304L1063 1279L1088 1254L1109 1229L1127 1204L1142 1179L1156 1154L1167 1129L1177 1104L1185 1079L1191 1054L1196 1029L1199 1004L1200 979L1199 954L1197 929L1192 904L1186 879L1177 854L1165 829L1151 804L1134 779L1113 754L1093 729Z';
-  const wall = [...IN.matchAll(/(\d+) (\d+)/g)].map(m => [+m[1], +m[2]]).filter(([x]) => x < 800); // left wall, for the streak
+  // inside of the pot; its top edge runs just under the rim's outline, so that is where tilted honey stops
+  const IN = 'M509 729L489 754L468 779L449 804L435 829L424 854L415 879L409 904L404 929L401 954L401 979L402 1004L406 1029L410 1054L416 1079L425 1104L434 1129L445 1154L459 1179L474 1204L491 1229L513 1254L536 1279L565 1304L583 1329L637 1354L760 1369L836 1369L961 1354L1016 1329L1035 1304L1063 1279L1088 1254L1109 1229L1127 1204L1142 1179L1156 1154L1167 1129L1177 1104L1185 1079L1191 1054L1196 1029L1199 1004L1200 979L1199 954L1197 929L1192 904L1186 879L1177 854L1165 829L1151 804L1134 779L1113 754L1093 729L1085 733L1060 743L1035 751L1010 758L985 764L960 768L935 772L910 775L885 777L860 779L835 780L810 780L785 780L760 780L735 779L710 777L685 774L660 771L635 767L610 762L585 756L560 749L535 740Z';
+  const P = [...IN.matchAll(/(\d+) (\d+)/g)].map(m => [+m[1], +m[2]]), RAD = Math.PI / 180;
+  // Area of the pot's inside on the gravity side of the line p·u = s (u = unit gravity in the art's space).
+  function cut(ux, uy, s) {
+    const d = p => p[0] * ux + p[1] * uy - s, out = [];
+    P.forEach((a, i) => {
+      const b = P[(i + 1) % P.length], da = d(a), db = d(b);
+      if (da >= 0) out.push(a);
+      if (da * db < 0) out.push([a[0] + (b[0] - a[0]) * da / (da - db), a[1] + (b[1] - a[1]) * da / (da - db)]);
+    });
+    return Math.abs(out.reduce((A, a, i) => A + a[0] * out[(i + 1) % out.length][1] - out[(i + 1) % out.length][0] * a[1], 0)) / 2;
+  }
+  // Where the surface sits when gravity leans `deg` from straight down: the line that keeps the honey's area (its volume).
+  function surface(deg, area) {
+    const ux = Math.sin(deg * RAD), uy = Math.cos(deg * RAD), dots = P.map(p => p[0] * ux + p[1] * uy);
+    let lo = Math.min(...dots), hi = Math.max(...dots);
+    for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; cut(ux, uy, m) > area ? lo = m : hi = m; }
+    return (lo + hi) / 2;
+  }
+  // Honey can't lean past sideways: beyond 90° it stays pinned on the side it was already on.
+  const lean = (raw, was) => Math.abs(raw) <= 90 ? raw : Math.sign(was || raw) * 90;
+  const wall = P.filter(([x, y]) => x < 800 && y > 780); // left wall, for the streak
   const reduce = matchMedia('(prefers-reduced-motion: reduce)'), pot = $('pot'), img = $('potImg');
-  let allowed = !!window.DeviceOrientationEvent && !DeviceOrientationEvent.requestPermission, angle = 0, lastShake = 0;
+  let allowed = !!window.DeviceOrientationEvent && !DeviceOrientationEvent.requestPermission, lastShake = 0;
+  let raw = 0, target = 0, ang = 0, vel = 0, area = 0, dripT = 0, last = 0, running = false;
   const live = () => allowed && loadUI().motion && !reduce.matches;
   const calShowing = () => !document.hidden && !$('v-cal').hidden;
-  pot.insertAdjacentHTML('beforeend', `<svg class="honey" viewBox="0 0 1600 1600" hidden aria-hidden="true"><clipPath id="potIn"><path d="${IN}"/></clipPath><g clip-path="url(#potIn)"><g id="honey"></g></g></svg>`);
-  const svg = pot.querySelector('.honey'), g = $('honey');
+  pot.insertAdjacentHTML('beforeend', `<svg class="honey" viewBox="0 0 1600 1600" hidden aria-hidden="true"><clipPath id="potIn"><path d="${IN}"/></clipPath><g clip-path="url(#potIn)"><g id="honey"></g></g><g id="drip" stroke-linecap="round" display="none"><path stroke="#592C0B" stroke-width="64"/><circle r="46" fill="#592C0B"/><path stroke="#F59B0A" stroke-width="38"/><circle r="33" fill="#F59B0A"/></g></svg>`);
+  const svg = pot.querySelector('.honey'), g = $('honey'), drip = $('drip');
+  // The honey is drawn once per level around its own surface centre (0,0), then moved and turned by pose().
   function draw(l) {
     svg.toggleAttribute('hidden', !l);
     if (!l) return;
     const Y = 1369 - l / 15 * 574, wave = [];
-    for (let x = -600; x <= 2200; x += 20) wave.push(`${x} ${(Y + 13 * Math.sin(2 * Math.PI * (x - 470) / 280)).toFixed(1)}`);
+    for (let x = -1400; x <= 1400; x += 20) wave.push(`${x} ${(13 * Math.sin(2 * Math.PI * (x + 330) / 280)).toFixed(1)}`);
     const wx = wall.reduce((a, b) => Math.abs(b[1] - Y - 42) < Math.abs(a[1] - Y - 42) ? b : a)[0] + 70;
-    g.style.transformOrigin = `800px ${Y}px`;
-    g.innerHTML = `<path d="M${wave.join('L')}L2200 3400L-600 3400Z" fill="#F59B0A"/><path d="M${wave.join('L')}" fill="none" stroke="#592C0B" stroke-width="23"/>`
-      + (1369 - Y > 110 ? `<rect x="${wx}" y="${Y + 29}" width="${Math.min(170, 800 - wx)}" height="26" rx="13" fill="#F5AF3E"/>` : '');
+    area = cut(0, 1, Y);
+    g.innerHTML = `<path d="M${wave.join('L')}L1400 2800L-1400 2800Z" fill="#F59B0A"/><path d="M${wave.join('L')}" fill="none" stroke="#592C0B" stroke-width="23"/>`
+      + (1369 - Y > 110 ? `<rect x="${wx - 800}" y="29" width="${Math.min(170, 800 - wx)}" height="26" rx="13" fill="#F5AF3E"/>` : '');
+    pose();
+  }
+  function pose() {
+    if (!area) return;
+    const ux = Math.sin(ang * RAD), uy = Math.cos(ang * RAD), k = surface(ang, area) - (800 * ux + 1050 * uy);
+    g.setAttribute('transform', `translate(${(800 + k * ux).toFixed(1)} ${(1050 + k * uy).toFixed(1)}) rotate(${(-ang).toFixed(2)})`);
+    const L = 220 * Math.sin(Math.PI * dripT / 5) ** 2, [x, y] = ang < 0 ? [470, 680] : [1130, 655];
+    drip.setAttribute('display', L > 4 ? 'inline' : 'none');
+    const dx = (L * Math.sin(raw * RAD)).toFixed(1), dy = (L * Math.cos(raw * RAD)).toFixed(1); // hangs along real gravity
+    for (const p of drip.children) p.tagName === 'path' ? p.setAttribute('d', `M${x} ${y}l${dx} ${dy}`) : (p.setAttribute('cx', x + +dx), p.setAttribute('cy', y + +dy));
+  }
+  // Honey is thick: a soft, heavily damped spring, so it creeps over in about a second and barely overshoots.
+  function tick(t) {
+    const dt = Math.min(0.05, (t - last) / 1000); last = t;
+    vel += (12 * (target - ang) - 5 * vel) * dt; ang += vel * dt;
+    dripT = Math.abs(raw) > 120 ? dripT + dt : 0; // upside down: one 5s drip, repeating while it stays upside down
+    pose();
+    running = live() && calShowing() && (Math.abs(target - ang) > 0.05 || Math.abs(vel) > 0.05 || dripT > 0);
+    if (running) requestAnimationFrame(tick);
   }
   const base = l => l < 5 ? potFile(0) : `assets/pots/base-${l < 10 ? '1bee' : '2bees'}.webp`; // bees match the baked states
   potView = l => live() && l >= 1 && l <= 15 ? (draw(l), base(l)) : (draw(0), potFile(l));
-  // ponytail: left-right lean only (gamma, portrait); a phone tipped flat or landscape just reads as less tilt
+  // Gravity in the screen's plane from the phone's pose (beta, gamma), turned by the screen's own rotation.
+  // Lying flat there is almost no sideways pull, so the honey keeps its last lean instead of jittering.
   addEventListener('deviceorientation', e => {
-    if (!live() || !calShowing() || e.gamma == null) return;
-    const a = Math.max(-25, Math.min(25, -e.gamma));
-    if (Math.abs(a - angle) < 1) return;
-    g.style.transform = `rotate(${angle = a}deg)`;
+    if (!live() || !calShowing() || e.beta == null) return;
+    const gx = Math.cos(e.beta * RAD) * Math.sin(e.gamma * RAD), gy = Math.sin(e.beta * RAD);
+    if (Math.hypot(gx, gy) < 0.3) return;
+    raw = (Math.atan2(gx, gy) / RAD + ((screen.orientation && screen.orientation.angle) || 0) + 540) % 360 - 180;
+    target = lean(raw, target);
+    if (!running && (Math.abs(target - ang) > 1 || Math.abs(raw) > 120)) { running = true; last = performance.now(); requestAnimationFrame(tick); }
   });
   // Shake only matters when overflowing: a 1.5s "pouring harder" jiggle, at most once every 2.5s.
   addEventListener('devicemotion', e => {
