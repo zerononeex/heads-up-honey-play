@@ -22,10 +22,14 @@
   --hatch:rgba(59,42,26,.18);--warn:#A33}
 *{box-sizing:border-box;margin:0}
 [hidden]{display:none!important}
-html,body{height:100%}
+/* ponytail: no document-level bounce, so nothing (header included) can be dragged up under the status bar; only the inner regions scroll */
+html,body{height:100%;overscroll-behavior:none}
 body{background:var(--bg);color:var(--ink);font:14px/1.3 -apple-system,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-#app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 6px) 8px 0}
+#app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:0 8px}
+/* Solid top underlay: iOS 26's glass status bar blurs whatever is behind it, so this non-scrolling first row holds the top
+   safe area in flat skin colour and every scroll region starts below it. */
+#top{flex:none;margin:0 -8px;padding-top:calc(env(safe-area-inset-top) + 6px);background:var(--bg)}
 header{display:flex;align-items:center;gap:10px;min-height:52px}
 header b{display:block;font-size:17px}
 /* fixed square box: swapping the pot image never shifts the header */
@@ -97,6 +101,10 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin:2px 0}
 .cal-head b{font-size:14px}
 .cal-head button{width:36px;height:30px;font-size:18px}
+/* month stack: its own scroll region, exactly one 6-week month tall (249px measured); the Today pill floats over its bottom-right */
+.calwrap{position:relative;flex:none}
+#cal{position:relative;height:250px;overflow-y:auto}
+#today{position:absolute;right:6px;bottom:6px;padding:5px 12px;border-radius:14px;background:var(--on);color:var(--onink);font-size:12px;font-weight:600}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal .dow{font-size:10px;color:var(--mute);text-align:center}
 .cal .d{position:relative;height:34px;border-radius:6px;font-size:13px;text-align:center}
@@ -110,11 +118,12 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;st
 </head>
 <body>
 <main id="app">
+  <div id="top"></div>
   <section id="v-cal">
     <button class="back" id="back" data-view="filter" hidden>‹ Back to filter</button>
     <header id="hdr"><div class="pot" id="pot"><img id="potImg" width="56" height="56" alt=""></div><div id="hdrText"></div></header>
     <div id="banner" hidden><button data-checkin>Evening check-in — if it comes up naturally, grab a mood out of 10.</button><button class="x" data-week>Don’t ask this week</button><button class="x" data-dismiss aria-label="Dismiss">✕</button></div>
-    <div id="cal"></div>
+    <div class="calwrap"><div id="cal"></div><button id="today" data-today>Today</button></div>
     <div id="panel"></div>
   </section>
   <section id="v-filter" class="view" hidden>
@@ -171,7 +180,7 @@ function migrate(s) {
   throw new Error('Unknown data version ' + (s && s.version));
 }
 
-// ---- calendar (one render path, also used by the Filter screen)
+// ---- calendar (one render path: every month of the Calendar stack, and the Filter screen's month, which alone keeps the ‹ › pager)
 function calHTML(ym, o) {
   const first = ym + '-01', start = addDays(first, -new Date(D(first)).getUTCDay());
   let h = 'SMTWTFS'.split('').map(c => `<div class="dow">${c}</div>`).join('');
@@ -187,8 +196,15 @@ function calHTML(ym, o) {
     if (o.match && o.match.has(d)) c.push('m');
     h += `<button class="${c.join(' ')}" data-date="${d}">${+d.slice(8)}${e.moodScore ? `<i>${e.moodScore}</i>` : ''}</button>`;
   }
-  return `<div class="cal-head"><button data-month="-1" aria-label="Previous month">‹</button><b>${fmt(first, { month: 'long', year: 'numeric' })}</b><button data-month="1" aria-label="Next month">›</button></div><div class="cal">${h}</div>`;
+  const b = `<b>${fmt(first, { month: 'long', year: 'numeric' })}</b>`;
+  return `<div class="cal-head">${o.pager ? `<button data-month="-1" aria-label="Previous month">‹</button>${b}<button data-month="1" aria-label="Next month">›</button>` : b}</div><div class="cal">${h}</div>`;
 }
+// Calendar screen: a vertical stack of months around today, all in the DOM at once (13 small grids, no lazy loading).
+const STACK_RANGE = 6; // ponytail: fixed 6 months back to 6 ahead; widen this constant if older days need to be on screen
+const stackMonths = today => [...Array(2 * STACK_RANGE + 1)].map((_, i) => iso(Date.UTC(+today.slice(0, 4), today.slice(5, 7) - 1 - STACK_RANGE + i, 1)).slice(0, 7));
+// ponytail: a date outside the stack clamps to its first/last month (its day panel still opens)
+const monthIndex = (d, today) => Math.max(0, Math.min(2 * STACK_RANGE, (d.slice(0, 4) - today.slice(0, 4)) * 12 + (d.slice(5, 7) - today.slice(5, 7)) + STACK_RANGE));
+const stackHTML = o => stackMonths(o.today).map(ym => `<div class="mon">${calHTML(ym, o)}</div>`).join('');
 const shiftMonth = (ym, n) => addDays(ym + '-15', n * 30.5 | 0).slice(0, 7); // ponytail: mid-month + ~30.5d always lands in the adjacent month
 
 // ---- period days: a start is flow>=1 with no flow the day before; an end is flow>=1 with none the day after
@@ -328,7 +344,7 @@ function filterHTML(st, f, today) {
   if (f.tag || q) h += `<div class="row"><button class="seg" data-clear>Clear filter</button></div>`;
   if (!f.tag && !q) return h + '<p>Tap a tag or type to see matching days.</p>';
   h += `<div class="sum">${esc([f.tag, q && `“${q}”`].filter(Boolean).join(' + '))} — ${nDays(m.length)}</div>`;
-  h += calHTML(f.month, { days: st.days, today, match: new Set(m) });
+  h += calHTML(f.month, { days: st.days, today, match: new Set(m), pager: true });
   let last = '';
   for (const d of m) {
     const e = st.days[d], mo = d.slice(0, 7);
@@ -338,7 +354,7 @@ function filterHTML(st, f, today) {
   }
   return h;
 }
-// Jump from the Filter screen to a day's Focus panel; Back returns with the filter untouched.
+// Jump from the Filter screen to that day's panel (`month` = the stack scrolls there); Back returns with the filter untouched.
 const jump = (u, d) => Object.assign(u, { view: 'cal', selected: d, month: d.slice(0, 7), back: true });
 
 // ---- backup: validate the whole file before anything is written (same rule as game save codes)
@@ -439,6 +455,7 @@ ${stop('note', '<div class="lbl">Note</div>', e.note, `<input id="note" placehol
 
 // ---- app (DOM only below this line)
 let store, readOnly = false;
+// ui.month: a month the Calendar stack scrolls to on the next render (then cleared); null leaves the scroll alone
 const ui = { view: 'cal', back: false, selected: null, month: null, periOpen: false, cyc: null, compare: false };
 const sui = { pendingImport: null, resetStep: 0, msg: '' };
 const filt = { tag: null, q: '', month: null };
@@ -477,6 +494,8 @@ function download(name, text, type) {
   a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+// Scrolls the month stack so the date's month sits at the top (Today pill, opening the screen, the Filter jump).
+const scrollToMonth = (d, smooth) => $('cal').scrollTo({ top: $('cal').children[monthIndex(d, todayISO())].offsetTop, behavior: smooth ? 'smooth' : 'auto' });
 function render() {
   const h = status(store, todayISO());
   const lvl = potLevel(store, todayISO()), img = $('potImg'), src = potView(lvl);
@@ -491,7 +510,8 @@ function render() {
   for (const v of ['cal', 'filter', 'cycles', 'settings']) $('v-' + v).hidden = ui.view !== v;
   $('back').hidden = !ui.back;
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.view === ui.view));
-  $('cal').innerHTML = calHTML(ui.month, { days: store.days, selected: ui.selected, today: todayISO(), win: currentPrediction(store) });
+  $('cal').innerHTML = stackHTML({ days: store.days, selected: ui.selected, today: todayISO(), win: currentPrediction(store) });
+  if (ui.month && ui.view === 'cal') { scrollToMonth(ui.month); ui.month = null; }
   $('panel').innerHTML = panelHTML(ui.selected, store.days, ui.periOpen);
 }
 
@@ -502,9 +522,9 @@ function init() {
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button,tr[data-cyc]'); if (!b) return;
     const t = b.dataset, inFilter = !!b.closest('#v-filter');
-    if (t.view) { Object.assign(ui, { view: t.view, back: false }); Object.assign(sui, { pendingImport: null, resetStep: 0, msg: '' }); }
-    else if (t.month && inFilter) filt.month = shiftMonth(filt.month, +t.month);
-    else if (t.month) ui.month = shiftMonth(ui.month, +t.month);
+    if (t.view) { Object.assign(ui, { view: t.view, back: false, month: t.view === 'cal' ? todayISO() : null }); Object.assign(sui, { pendingImport: null, resetStep: 0, msg: '' }); }
+    else if (t.month) filt.month = shiftMonth(filt.month, +t.month);
+    else if ('today' in t) { ui.selected = todayISO(); render(); return scrollToMonth(todayISO(), true); }
     else if (t.date && inFilter) jump(ui, t.date);
     else if (t.date) ui.selected = t.date;
     else if (t.tag) { filt.tag = filt.tag === t.tag ? null : t.tag; const m = matchDays(store.days, filt.tag, filt.q)[0]; if (m) filt.month = m.slice(0, 7); }

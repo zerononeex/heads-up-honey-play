@@ -194,6 +194,25 @@ test('filter: results list grouped by month (newest first), rows jump to the rig
   $('jump')(u, rows[1][0]);
   assert.deepEqual({ ...u }, { view: 'cal', selected: '2026-09-03', month: '2026-09', back: true });
 });
+test('calendar stack: 13 months in order around today, Today pill, no pager; scroll helper finds the month', () => {
+  const h = $('stackHTML')({ days: { '2026-08-12': { flow: 2 } }, selected: '2026-08-12', today: '2026-10-24' });
+  const secs = h.split('<div class="mon">').slice(1);
+  assert.equal(secs.length, 13);
+  assert.deepEqual(secs.map(s => s.match(/<b>([^<]+)/)[1]), ['April 2026', 'May 2026', 'June 2026', 'July 2026', 'August 2026', 'September 2026',
+    'October 2026', 'November 2026', 'December 2026', 'January 2027', 'February 2027', 'March 2027', 'April 2027']);
+  assert.match(secs[6], /class="d today" data-date="2026-10-24"/); // same cell rendering in every month
+  assert.match(secs[4], /class="d f2 sel" data-date="2026-08-12"/);
+  assert.doesNotMatch(h, /data-month|‹|›/, 'month headers are plain labels');
+  const cal = html.slice(html.indexOf('<section id="v-cal">'), html.indexOf('<section id="v-filter"'));
+  assert.match(cal, /<button id="today" data-today>Today<\/button>/);
+  assert.doesNotMatch(cal, /data-month/);
+  assert.match($('filterHTML')(tagged(), { tag: 'Headache', q: '', month: '2026-10' }, '2026-10-24'), /data-month="-1"[\s\S]*data-month="1"/, 'Filter keeps its pager');
+  const mi = d => $('monthIndex')(d, '2026-10-24');
+  assert.equal(mi('2026-10-24'), 6); assert.equal(mi('2026-04-30'), 0); assert.equal(mi('2027-01-01'), 9); assert.equal(mi('2027-04-15'), 12);
+  assert.equal(mi('2025-01-01'), 0); assert.equal(mi('2028-01-01'), 12); // outside the stack clamps to an end
+  assert.equal($('stackMonths')('2026-01-31')[0], '2025-07'); // year rollover
+  assert.equal($('STACK_RANGE'), 6);
+});
 test('import: validates the whole file before anything is written', () => {
   const imp = t => $('parseImport')(t);
   const good = storeWith(startsFrom('2026-01-01', [28, 28]), { '2026-01-10': { ...$('blankEntry')(), moodScore: 6, perimeno: ['Brain fog'], note: 'ok', source: 'voice' } });
@@ -344,4 +363,17 @@ test('.ics: one discreet all-day event over the predicted window; refused while 
   assert.match(h, /No prediction yet — the calendar file appears once the app can predict a window\./);
 });
 
+test('top underlay: solid skin colour holds the top safe area on a non-scrolling row; nav stays opaque', () => {
+  const rule = sel => html.match(new RegExp('\\n' + sel.replace(/[#()]/g, '\\$&') + '\\{([^}]*)\\}'))[1];
+  assert.match(rule('#top'), /flex:none/); assert.match(rule('#top'), /background:var\(--bg\)/);
+  assert.match(rule('#top'), /padding-top:calc\(env\(safe-area-inset-top\) \+ 6px\)/);
+  assert.doesNotMatch(rule('#top'), /overflow/);
+  assert.doesNotMatch(rule('#app'), /safe-area|overflow/, 'the top inset moved off #app onto #top');
+  assert.equal((html.match(/safe-area-inset-top/g) || []).length, 1);
+  assert.match(html, /<main id="app">\n  <div id="top"><\/div>\n  <section id="v-cal">/, '#top is the first row, a sibling of every screen');
+  assert.match(rule('html,body'), /overscroll-behavior:none/);
+  assert.match(rule('nav'), /background:var\(--bg\)/); assert.match(rule('nav'), /padding-bottom:env\(safe-area-inset-bottom\)/);
+  for (const sk of html.match(/--bg:[^;]+/g)) assert.match(sk, /^--bg:#[0-9A-F]{6}$/i, 'skin backgrounds are fully opaque');
+  assert.match(html, /<meta name="apple-mobile-web-app-status-bar-style" content="default">/);
+});
 console.log(`\n${n} checks passed`);
